@@ -1,0 +1,73 @@
+﻿# Nexus Hotel PMS - .gitignore
+
+# Dependencias / Build
+node_modules/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Entornos / Configuración local
+.env
+.env.local
+.env.*.local
+config/local.*
+
+# IDE / Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Base de datos local / Migraciones
+*.sqlite
+*.db
+migrations/*.sql
+
+# Logs y temporal
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+
+# Cobertura / Test
+coverage/
+.nyc_output/
+
+# Documentación generada
+docs/*.pdf
+docs/generated/
+
+# Certificados / Secrets (NUNCA commitear)
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
+*.env.secrets
+
+# Docker
+.docker/
+
+# OS / Editor specific
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript cache
+*.tsbuildinfo
