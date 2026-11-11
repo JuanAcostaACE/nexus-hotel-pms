@@ -4,7 +4,7 @@
 
 ##Vista de contexto
 ---
-<img width="1152" height="832" alt="image" src="https://github.com/user-attachments/assets/40ac09d0-c48a-480a-887e-198edcf03b91" />
+<img width="888" height="646" alt="Diagrama vista de contexto" src="https://github.com/user-attachments/assets/4f007a84-233a-4c08-b862-b78c2b88a5f5" />
 
 ---
 ##Vista Funcional
