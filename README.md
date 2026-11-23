@@ -22,6 +22,8 @@
 ---
 ##Vista de Desarrollo(por capas)
 ---
+<img width="1077" height="875" alt="diagrama vista de desarrollo(por capas) (2)" src="https://github.com/user-attachments/assets/ccb8db79-d1af-4005-9f9c-c05fb6cc64e1" />
+
 
 
 ---
