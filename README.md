@@ -4,17 +4,32 @@
 
 ##Vista de contexto
 ---
-<img width="888" height="646" alt="Diagrama vista de contexto" src="https://github.com/user-attachments/assets/4f007a84-233a-4c08-b862-b78c2b88a5f5" />
+<img width="888" height="659" alt="Diagrama vista de contexto (1)" src="https://github.com/user-attachments/assets/7eca8614-7886-4c24-8ac6-2dc2dbe65af4" />
+
 
 ---
 ##Vista Funcional
 ---
-<img width="715" height="1125" alt="image" src="https://github.com/user-attachments/assets/5f3cd972-dfe3-4a48-b0c0-a997443b9bf9" />
+<img width="1457" height="835" alt="diagrama vista funcional (1)" src="https://github.com/user-attachments/assets/534895b4-3041-451d-8406-ba8c6627e54b" />
+
+
 
 ---
 ##Vista logica
 ---
-<img width="1019" height="839" alt="image" src="https://github.com/user-attachments/assets/f0f6938a-79ec-4186-994e-cb66e4f0a4cf" />
+
+
+---
+##Vista de Desarrollo(por capas)
+---
+
+
+---
+Vista de despliegue
+---
+<img width="1565" height="667" alt="diagrama de vista de despliegue (2)" src="https://github.com/user-attachments/assets/5f02dcbc-721e-4543-9b7d-b891d06a9c4c" />
+
+
 
 ---
 
