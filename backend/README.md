@@ -28,6 +28,7 @@ La cadena de conexión **no está en el código ni en este repositorio**: se lee
 | `PORT` | No | `8080` | Puerto del servidor |
 | `JWT_SECRET` | No | valor de desarrollo | Secreto para firmar los JWT (cámbialo fuera de pruebas) |
 | `PSE_WEBHOOK_SECRET` | No | `nexus-pse-secreto` | Valor esperado en la cabecera `X-PSE-Secret` del webhook |
+| `CORS_ORIGENES` | No | `http://localhost:*,http://127.0.0.1:*` | Orígenes del frontend web permitidos, separados por coma (admite comodines, p. ej. `https://*.vercel.app`) |
 
 ## Ejecutar
 
@@ -54,6 +55,17 @@ Al primer arranque, si la base no tiene sedes, se crean **datos de prueba**:
 | Catálogo (en cada sede) | Agua mineral 500ml, Almuerzo ejecutivo, Botella de vino (inactivo) |
 
 Estas credenciales son solo para desarrollo y pruebas.
+
+## Despliegue (Railway) y frontend web
+El backend se publica tal cual en [Railway](https://railway.app) (Maven + Java 17, `system.properties`):
+1. *New Project → Deploy from GitHub repo* y, en *Settings → Root Directory*, escribe `backend`.
+2. En *Variables* define `MONGODB_URI`, `MONGODB_DATABASE`, `JWT_SECRET` (nuevo, mínimo 32 caracteres),
+   `PSE_WEBHOOK_SECRET` y `CORS_ORIGENES` (la URL del frontend, p. ej. `https://tu-app.vercel.app`). Railway asigna `PORT`.
+3. En Atlas → *Network Access* permite la IP de Railway (para una demo, `0.0.0.0/0`).
+4. *Settings → Networking → Generate Domain* y prueba `https://TU-URL/api/sedes`.
+
+El cliente de terminal funciona contra el backend publicado: `scripts
+exus.ps1 -BaseUrl https://TU-URL`.
 
 ## Pruebas
 - **Unitarias** (dominio y patrón Strategy, no necesitan Mongo): `mvn test`

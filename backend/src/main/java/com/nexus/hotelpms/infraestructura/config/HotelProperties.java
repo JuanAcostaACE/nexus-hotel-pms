@@ -17,4 +17,5 @@ public record HotelProperties(
         @DefaultValue("nexus-pse-secreto") String pseSecret,
         @DefaultValue("15") int sesionMinutos,
         @DefaultValue("cambia-este-secreto-jwt-de-al-menos-32-caracteres") String jwtSecret,
-        @DefaultValue("true") boolean seedHabilitado) { }
+        @DefaultValue("true") boolean seedHabilitado,
+        @DefaultValue("http://localhost:*,http://127.0.0.1:*") String corsOrigenes) { }

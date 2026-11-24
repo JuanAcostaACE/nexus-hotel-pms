@@ -24,6 +24,8 @@ hotel:
   pse-secret: ${PSE_WEBHOOK_SECRET:nexus-pse-secreto}
   jwt-secret: ${JWT_SECRET:cambia-este-secreto-jwt-de-al-menos-32-caracteres}
   seed-habilitado: true
+  # Orígenes del frontend permitidos por CORS (separados por coma; admiten comodines, p. ej. https://*.vercel.app).
+  cors-origenes: ${CORS_ORIGENES:http://localhost:*,http://127.0.0.1:*}
   job-liberacion-ms: 30000
 
 logging:

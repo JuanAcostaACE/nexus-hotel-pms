@@ -1,10 +1,12 @@
 package com.nexus.hotelpms.infraestructura.seguridad;
 
 import com.nexus.hotelpms.aplicacion.puertos.ITokenService;
+import com.nexus.hotelpms.infraestructura.config.HotelProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -14,7 +16,13 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -23,7 +31,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ITokenService tokens) throws Exception {
-        http.csrf(c -> c.disable())
+        http.cors(Customizer.withDefaults())
+            .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 // Flujo público del cliente (HU-01 a HU-05)
@@ -41,6 +50,25 @@ public class SecurityConfig {
                 .accessDeniedHandler(accessDenied()))
             .addFilterBefore(new JwtAuthFilter(tokens), UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * CORS para el frontend web (p. ej. Vercel). Los orígenes salen de {@code hotel.cors-origenes}
+     * (variable de entorno CORS_ORIGENES). Se exponen X-Token-Renovado (renovación de sesión, HU-06)
+     * y Content-Disposition (descarga de PDF).
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(HotelProperties props) {
+        CorsConfiguration c = new CorsConfiguration();
+        c.setAllowedOriginPatterns(Arrays.stream(props.corsOrigenes().split(","))
+                .map(String::trim).filter(o -> !o.isBlank()).toList());
+        c.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        c.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-PSE-Secret"));
+        c.setExposedHeaders(List.of("X-Token-Renovado", "Content-Disposition"));
+        c.setMaxAge(3600L);
+        UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
+        src.registerCorsConfiguration("/api/**", c);
+        return src;
     }
 
     private AuthenticationEntryPoint entryPoint() {
