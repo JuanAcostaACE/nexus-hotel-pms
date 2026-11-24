@@ -34,7 +34,10 @@ Los diagramas están en formato de imagen. La versión textual de cada vista est
 ### Vista funcional
 <img width="1457" height="835" alt="Diagrama vista funcional" src="https://github.com/user-attachments/assets/534895b4-3041-451d-8406-ba8c6627e54b" />
 
-### Vista lógica (por capas)
+### Vista logica
+<img width="1123" height="1014" alt="diagrama vista logica" src="https://github.com/user-attachments/assets/be6d5223-d65f-4ce8-ab44-e7f3882897a9" />
+
+### Vista de desarrollo (por capas)
 <img width="1227" height="875" alt="Diagrama vista lógica por capas" src="https://github.com/user-attachments/assets/72802b6a-ac87-4e53-8d79-2d3c48bfd8f0" />
 
 ### Vista de despliegue
