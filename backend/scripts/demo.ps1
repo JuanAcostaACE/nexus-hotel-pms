@@ -169,7 +169,8 @@ Pausa
 # ================================================================ HU-03
 Titulo "HU-03" "Pago seguro con PSE (simulado) · patrón ADAPTER"
 $null = Paso "HU-03" "Webhook de PSE sin la cabecera secreta → rechazado" 403 "POST" "/api/webhooks/pse" @{ transaccionId = "TRX-FALSA"; resultado = "Aprobado" }
-$null = Paso "HU-03" "Pagar la reserva con PSE (aprobado)" 200 "POST" "/api/reservas/$rsvId/pago" @{ banco = "1007"; simulacion = "APROBADO" } -ver {
+$null = Paso "HU-03" "Intentar pagar con un documento que NO es del huésped → rechazado" 404 "POST" "/api/reservas/$rsvId/pago" @{ banco = "1007"; simulacion = "APROBADO"; documento = "000" }
+$null = Paso "HU-03" "Pagar la reserva con PSE (aprobado)" 200 "POST" "/api/reservas/$rsvId/pago" @{ banco = "1007"; simulacion = "APROBADO"; documento = $cedula } -ver {
     param($j) Write-Host "     transacción: $($j.transaccionId)  pago: $($j.estadoPago)  reserva: $($j.estadoReserva)" -ForegroundColor Gray }
 Nota "PseGatewayAdapter adapta PseClienteSimulado (centavos, OK/FAILED/PENDING) al puerto IPagoGateway."
 Pausa
@@ -179,26 +180,26 @@ Titulo "HU-04" "Cancelación y reembolso · patrón STRATEGY"
 $rt = Paso "HU-04" "Reserva con entrada en 3 días: crear" 201 "POST" "/api/reservas" @{
     sedeId = $sedeNorte; habitacionId = $habTotal.id; fechaEntrada = $en3; fechaSalida = $en5; numHuespedes = 2
     clienteNombre = "Luis Ruiz"; clienteDocumento = "77$sufijo"; clienteEmail = "luis@correo.com" } -ver { param($j) Write-Host "     código: $($j.codigo)  total: $($j.valorTotal)" -ForegroundColor Gray }
-$null = Prep "POST" "/api/reservas/$($rt.Json.id)/pago" @{ banco = "1007"; simulacion = "APROBADO" }
-$null = Paso "HU-04" "Cancelar con MÁS de 48 h de anticipación → ReembolsoTotal" 200 "POST" "/api/reservas/$($rt.Json.id)/cancelar" -ver {
+$null = Prep "POST" "/api/reservas/$($rt.Json.id)/pago" @{ banco = "1007"; simulacion = "APROBADO"; documento = "77$sufijo" }
+$null = Paso "HU-04" "Cancelar con MÁS de 48 h de anticipación → ReembolsoTotal" 200 "POST" "/api/reservas/$($rt.Json.id)/cancelar" @{ documento = "77$sufijo" } -ver {
     param($j) Write-Host "     política: $($j.politica)  reembolso: $($j.reembolso)  retenido: $($j.retenido)  estado: $($j.estado)" -ForegroundColor Gray }
 $rp = Paso "HU-04" "Reserva con entrada mañana: crear" 201 "POST" "/api/reservas" @{
     sedeId = $sedeNorte; habitacionId = $habParcial.id; fechaEntrada = $manana; fechaSalida = $pasado; numHuespedes = 2
     clienteNombre = "Marta Gil"; clienteDocumento = "88$sufijo"; clienteEmail = "marta@correo.com" } -ver { param($j) Write-Host "     código: $($j.codigo)  total: $($j.valorTotal)" -ForegroundColor Gray }
-$null = Prep "POST" "/api/reservas/$($rp.Json.id)/pago" @{ banco = "1007"; simulacion = "APROBADO" }
-$null = Paso "HU-04" "Cancelar con MENOS de 48 h → ReembolsoParcial (retiene una noche)" 200 "POST" "/api/reservas/$($rp.Json.id)/cancelar" -ver {
+$null = Prep "POST" "/api/reservas/$($rp.Json.id)/pago" @{ banco = "1007"; simulacion = "APROBADO"; documento = "88$sufijo" }
+$null = Paso "HU-04" "Cancelar con MENOS de 48 h → ReembolsoParcial (retiene una noche)" 200 "POST" "/api/reservas/$($rp.Json.id)/cancelar" @{ documento = "88$sufijo" } -ver {
     param($j) Write-Host "     política: $($j.politica)  reembolso: $($j.reembolso)  retenido: $($j.retenido)  estado: $($j.estado)" -ForegroundColor Gray }
 Nota "SelectorPoliticaReembolso elige la estrategia; ReservaService#cancelar es el Context."
 Pausa
 
 # ================================================================ HU-05
 Titulo "HU-05" "Comprobante de reserva en PDF con código QR"
-$pdf = Api "GET" "/api/reservas/$rsvId/comprobante"
+$pdf = Api "GET" "/api/reservas/$rsvId/comprobante?documento=$cedula"
 $script:total++
 $esPdf = ($pdf.Status -eq 200 -and $pdf.Bytes.Length -gt 4 -and [Text.Encoding]::ASCII.GetString($pdf.Bytes[0..3]) -eq "%PDF")
 Write-Host ""
 Write-Host "   » Descargar el comprobante (solo existe si el pago fue aprobado)" -ForegroundColor White
-Write-Host "     GET /api/reservas/$rsvId/comprobante" -ForegroundColor Yellow
+Write-Host "     GET /api/reservas/$rsvId/comprobante?documento=…" -ForegroundColor Yellow
 if ($esPdf) {
     $archivo = Join-Path $env:TEMP "comprobante-nexus.pdf"
     [IO.File]::WriteAllBytes($archivo, $pdf.Bytes)
@@ -319,6 +320,8 @@ $null = Paso "HU-15" "Editar tipo, capacidad y precio" 200 "PUT" "/api/admin/hab
 $null = Paso "HU-15" "Enviar a Mantenimiento (sale de la disponibilidad)" 200 "POST" "/api/admin/habitaciones/$($hn.Json.id)/estado" @{ estado = "Mantenimiento" } -token $adm -ver {
     param($j) Write-Host "     estado: $($j.habitacion.estado)  reservas futuras afectadas: $($j.reservasFuturasAfectadas)" -ForegroundColor Gray }
 $null = Paso "HU-15" "Restaurar a Disponible" 200 "POST" "/api/admin/habitaciones/$($hn.Json.id)/estado" @{ estado = "Disponible" } -token $adm
+$null = Paso "HU-15" "El administrador intenta forzar el estado Ocupada → rechazado" 422 "POST" "/api/admin/habitaciones/$($hn.Json.id)/estado" @{ estado = "Ocupada" } -token $adm
+$null = Paso "HU-15" "Crear otra habitación con el mismo número → conflicto" 409 "POST" "/api/admin/habitaciones" @{ sedeId = $sedeNorte; numero = "D$sufijo"; tipo = "Doble"; capacidadMax = 2; precioBase = 150000 } -token $adm
 Pausa
 
 # ================================================================ HU-16

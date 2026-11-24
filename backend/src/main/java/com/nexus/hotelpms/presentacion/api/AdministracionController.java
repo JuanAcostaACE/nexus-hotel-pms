@@ -13,6 +13,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,7 +78,8 @@ public class AdministracionController {
     public record RecepcionistaRequest(
             @NotBlank(message = "El nombre es obligatorio") String nombre,
             @NotBlank(message = "El correo es obligatorio") @Email(message = "El correo no es válido") String email,
-            @NotBlank(message = "La contraseña es obligatoria") String password,
+            @NotBlank(message = "La contraseña es obligatoria")
+            @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres") String password,
             @NotBlank(message = "Debe asignar una sede al usuario para continuar") String sedeId) { }
     public record UsuarioUpdateRequest(
             @NotBlank(message = "El nombre es obligatorio") String nombre,
@@ -116,12 +119,14 @@ public class AdministracionController {
             @NotBlank(message = "El número de habitación es obligatorio") String numero,
             @NotBlank(message = "El tipo de habitación es obligatorio") String tipo,
             @NotNull(message = "La capacidad máxima es obligatoria") @Min(value = 1, message = "La capacidad máxima debe ser mayor a cero") Integer capacidadMax,
-            @NotNull(message = "El precio base es obligatorio") BigDecimal precioBase) { }
+            @NotNull(message = "El precio base es obligatorio") @Positive(message = "El precio base debe ser mayor a cero") BigDecimal precioBase) { }
     public record HabitacionUpdateRequest(
             @NotBlank(message = "El tipo de habitación es obligatorio") String tipo,
             @NotNull(message = "La capacidad máxima es obligatoria") @Min(value = 1, message = "La capacidad máxima debe ser mayor a cero") Integer capacidadMax,
-            @NotNull(message = "El precio base es obligatorio") BigDecimal precioBase) { }
-    public record EstadoHabitacionRequest(@NotNull(message = "El estado es obligatorio") EstadoHabitacion estado) { }
+            @NotNull(message = "El precio base es obligatorio") @Positive(message = "El precio base debe ser mayor a cero") BigDecimal precioBase) { }
+    /** {@code confirmar}: necesario para enviar a Mantenimiento una habitación con reservas pagadas vigentes. */
+    public record EstadoHabitacionRequest(@NotNull(message = "El estado es obligatorio") EstadoHabitacion estado,
+                                          Boolean confirmar) { }
 
     @PostMapping("/habitaciones")
     public ResponseEntity<Habitacion> crearHabitacion(@Valid @RequestBody HabitacionRequest r) {
@@ -135,18 +140,18 @@ public class AdministracionController {
 
     @PostMapping("/habitaciones/{id}/estado")
     public Map<String, Object> cambiarEstado(@PathVariable String id, @Valid @RequestBody EstadoHabitacionRequest r) {
-        return admin.cambiarEstadoHabitacion(id, r.estado());
+        return admin.cambiarEstadoHabitacion(id, r.estado(), Boolean.TRUE.equals(r.confirmar()));
     }
 
     // ---- HU-16: catálogo de consumos ----
     public record ItemRequest(
             @NotBlank(message = "La sede es obligatoria") String sedeId,
             @NotBlank(message = "El nombre del ítem es obligatorio") String nombre,
-            @NotNull(message = "El precio es obligatorio") BigDecimal precio,
+            @NotNull(message = "El precio es obligatorio") @Positive(message = "El precio debe ser mayor a cero") BigDecimal precio,
             @NotNull(message = "La categoría es obligatoria") CategoriaConsumo categoria) { }
     public record ItemUpdateRequest(
             @NotBlank(message = "El nombre del ítem es obligatorio") String nombre,
-            @NotNull(message = "El precio es obligatorio") BigDecimal precio,
+            @NotNull(message = "El precio es obligatorio") @Positive(message = "El precio debe ser mayor a cero") BigDecimal precio,
             @NotNull(message = "La categoría es obligatoria") CategoriaConsumo categoria) { }
 
     @GetMapping("/catalogo")

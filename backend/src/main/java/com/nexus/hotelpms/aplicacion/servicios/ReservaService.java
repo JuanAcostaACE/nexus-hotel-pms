@@ -145,10 +145,13 @@ public class ReservaService {
     }
 
     void liberarHabitacion(String habitacionId) {
-        habitaciones.buscarPorId(habitacionId).ifPresent(h -> {
-            h.cambiarEstado(EstadoHabitacion.Disponible);
-            habitaciones.guardar(h);
-        });
+        // Solo se libera si sigue retenida por la reserva; si el administrador la envió a Mantenimiento se respeta.
+        habitaciones.buscarPorId(habitacionId)
+                .filter(h -> h.getEstado() == EstadoHabitacion.Bloqueada || h.getEstado() == EstadoHabitacion.Reservada)
+                .ifPresent(h -> {
+                    h.cambiarEstado(EstadoHabitacion.Disponible);
+                    habitaciones.guardar(h);
+                });
     }
 
     // ------------------------------------------------------------------ consultas
@@ -156,6 +159,21 @@ public class ReservaService {
     public Reserva obtener(String idOCodigo) {
         return reservas.buscarPorCodigo(idOCodigo).or(() -> reservas.buscarPorId(idOCodigo))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva no encontrada"));
+    }
+
+    /**
+     * Operaciones públicas del cliente (pago, cancelación, comprobante): además del código se exige el documento
+     * del huésped. Si no coincide se responde igual que si la reserva no existiera, para no revelar códigos válidos.
+     */
+    public Reserva obtenerParaCliente(String idOCodigo, String documento) {
+        Reserva r = (idOCodigo == null ? java.util.Optional.<Reserva>empty()
+                : reservas.buscarPorCodigo(idOCodigo).or(() -> reservas.buscarPorId(idOCodigo))).orElse(null);
+        boolean coincide = r != null && documento != null && !documento.isBlank()
+                && r.getClienteDocumento().trim().equalsIgnoreCase(documento.trim());
+        if (!coincide) {
+            throw new RecursoNoEncontradoException("No se encontró la reserva con ese código y documento");
+        }
+        return r;
     }
 
     /** Acceso del personal: respeta el aislamiento por sede (HU-07). */
@@ -191,8 +209,8 @@ public class ReservaService {
     }
 
     // Patrón Strategy (contexto)
-    public CancelacionResponse cancelar(String idOCodigo) {
-        Reserva r = obtener(idOCodigo);
+    public CancelacionResponse cancelar(String idOCodigo, String documento) {
+        Reserva r = obtenerParaCliente(idOCodigo, documento);
         PoliticaReembolso politica = selectorReembolso.seleccionar(r, ahora());
         if (r.getEstado() != EstadoReserva.Pagada) {
             throw new ReglaNegocioException("Solo se pueden cancelar reservas en estado Pagada");
@@ -210,6 +228,11 @@ public class ReservaService {
     }
 
     // ------------------------------------------------------------------ HU-05
+    /** Descarga del cliente: exige código y documento. */
+    public byte[] comprobanteCliente(String idOCodigo, String documento) {
+        return comprobante(obtenerParaCliente(idOCodigo, documento).getCodigo());
+    }
+
     public byte[] comprobante(String idOCodigo) {
         Reserva r = obtener(idOCodigo);
         if (!CON_COMPROBANTE.contains(r.getEstado())) {

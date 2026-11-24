@@ -26,6 +26,10 @@ hotel:
   seed-habilitado: true
   # Orígenes del frontend permitidos por CORS (separados por coma; admiten comodines, p. ej. https://*.vercel.app).
   cors-origenes: ${CORS_ORIGENES:http://localhost:*,http://127.0.0.1:*}
+  # Contraseñas de los usuarios de prueba que se crean con la base vacía. SOLO para desarrollo: en cualquier
+  # despliegue público defínelas con variables de entorno o cámbialas con POST /api/auth/cambiar-password.
+  seed-admin-password: ${SEED_ADMIN_PASSWORD:Admin123*}
+  seed-recep-password: ${SEED_RECEP_PASSWORD:Recep123*}
   job-liberacion-ms: 30000
 
 logging:

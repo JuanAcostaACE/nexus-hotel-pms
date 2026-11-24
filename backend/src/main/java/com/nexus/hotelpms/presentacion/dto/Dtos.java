@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -34,8 +35,17 @@ public final class Dtos {
 
     public record DisponibilidadResponse(List<Habitacion> habitaciones, String mensaje) { }
 
+    /** El documento del huésped acompaña al código de la reserva: el código solo no basta para operar sobre ella. */
     public record PagoRequest(@NotBlank(message = "El banco es obligatorio") String banco,
-                              String simulacion) { }
+                              String simulacion,
+                              @NotBlank(message = "El documento del huésped es obligatorio") String documento) { }
+
+    public record CancelarRequest(@NotBlank(message = "El documento del huésped es obligatorio") String documento) { }
+
+    public record CambiarPasswordRequest(
+            @NotBlank(message = "La contraseña actual es obligatoria") String passwordActual,
+            @NotBlank(message = "La contraseña nueva es obligatoria")
+            @Size(min = 8, message = "La contraseña nueva debe tener al menos 8 caracteres") String passwordNueva) { }
 
     public record PagoResponse(String transaccionId, String estadoPago, String estadoReserva, String mensaje) { }
 

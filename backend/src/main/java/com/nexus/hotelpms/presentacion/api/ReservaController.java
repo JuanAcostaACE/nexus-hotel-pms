@@ -68,14 +68,15 @@ public class ReservaController {
 
     /** HU-04 (público). */
     @PostMapping("/reservas/{id}/cancelar")
-    public CancelacionResponse cancelar(@PathVariable String id) {
-        return reservas.cancelar(id);
+    public CancelacionResponse cancelar(@PathVariable String id, @Valid @RequestBody CancelarRequest req) {
+        return reservas.cancelar(id, req.documento());
     }
 
     /** HU-05 (público): PDF con QR. */
     @GetMapping("/reservas/{id}/comprobante")
-    public ResponseEntity<byte[]> comprobante(@PathVariable String id) {
-        return pdf(reservas.comprobante(id), "comprobante-" + id + ".pdf");
+    public ResponseEntity<byte[]> comprobante(@PathVariable String id,
+                                              @RequestParam(required = false) String documento) {
+        return pdf(reservas.comprobanteCliente(id, documento), "comprobante-" + id + ".pdf");
     }
 
     /** HU-08. */

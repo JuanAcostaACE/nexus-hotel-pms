@@ -5,6 +5,7 @@ import com.nexus.hotelpms.aplicacion.puertos.IUsuarioRepository;
 import com.nexus.hotelpms.aplicacion.sesion.AuthPrincipal;
 import com.nexus.hotelpms.dominio.excepcion.CredencialesInvalidasException;
 import com.nexus.hotelpms.dominio.excepcion.RecursoNoEncontradoException;
+import com.nexus.hotelpms.dominio.excepcion.ReglaNegocioException;
 import com.nexus.hotelpms.dominio.modelo.Recepcionista;
 import com.nexus.hotelpms.dominio.modelo.Usuario;
 import com.nexus.hotelpms.infraestructura.config.HotelProperties;
@@ -41,6 +42,17 @@ public class AuthService {
         AuthPrincipal principal = new AuthPrincipal(u.getId(), u.getNombre(), u.getRol(), sedeId);
         return new LoginResponse(tokens.generar(principal), "Bearer", u.getRol(), sedeId, u.getNombre(),
                 props.sesionMinutos());
+    }
+
+    /** Cambio de contraseña del propio usuario: exige la contraseña actual. */
+    public void cambiarPassword(String userId, String actual, String nueva) {
+        Usuario u = usuarios.findById(userId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
+        if (!encoder.matches(actual, u.getPasswordHash())) {
+            throw new ReglaNegocioException("La contraseña actual no es correcta");
+        }
+        u.cambiarPasswordHash(encoder.encode(nueva));
+        usuarios.save(u);
     }
 
     public java.util.List<Usuario> listarUsuarios() {

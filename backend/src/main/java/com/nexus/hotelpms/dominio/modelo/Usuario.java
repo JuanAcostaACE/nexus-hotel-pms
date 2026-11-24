@@ -58,6 +58,9 @@ public abstract class Usuario {
     public void desbloquear() { this.bloqueado = false; this.intentosFallidos = 0; }
     public void inactivar() { this.activo = false; }
 
+    /** Reemplaza el hash de la contraseña (el cifrado lo hace la capa de aplicación). */
+    public void cambiarPasswordHash(String nuevoHash) { this.passwordHash = nuevoHash; }
+
     /** HU-14: edita nombre y correo sin tocar el rol ni la sede. */
     public void actualizarDatos(String nombre, String email) {
         this.nombre = nombre;

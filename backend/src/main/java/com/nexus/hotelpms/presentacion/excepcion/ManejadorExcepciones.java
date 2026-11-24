@@ -24,6 +24,11 @@ public class ManejadorExcepciones {
     @ExceptionHandler(ReglaNegocioException.class)
     ResponseEntity<Map<String, Object>> regla(ReglaNegocioException e) { return resp(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), null); }
 
+    @ExceptionHandler(org.springframework.dao.DuplicateKeyException.class)
+    ResponseEntity<Map<String, Object>> duplicado(Exception e) {
+        return resp(HttpStatus.CONFLICT, "Ya existe un registro con esos datos", null);
+    }
+
     @ExceptionHandler(ConflictoException.class)
     ResponseEntity<Map<String, Object>> conflicto(ConflictoException e) { return resp(HttpStatus.CONFLICT, e.getMessage(), null); }
 

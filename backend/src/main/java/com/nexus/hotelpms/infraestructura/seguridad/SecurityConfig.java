@@ -1,6 +1,7 @@
 package com.nexus.hotelpms.infraestructura.seguridad;
 
 import com.nexus.hotelpms.aplicacion.puertos.ITokenService;
+import com.nexus.hotelpms.aplicacion.puertos.IUsuarioRepository;
 import com.nexus.hotelpms.infraestructura.config.HotelProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,7 +31,7 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, ITokenService tokens) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ITokenService tokens, IUsuarioRepository usuarios) throws Exception {
         http.cors(Customizer.withDefaults())
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -48,7 +49,7 @@ public class SecurityConfig {
             .exceptionHandling(e -> e
                 .authenticationEntryPoint(entryPoint())
                 .accessDeniedHandler(accessDenied()))
-            .addFilterBefore(new JwtAuthFilter(tokens), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new JwtAuthFilter(tokens, usuarios), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -74,8 +75,11 @@ public class SecurityConfig {
     private AuthenticationEntryPoint entryPoint() {
         return (req, res, ex) -> {
             boolean expirada = Boolean.TRUE.equals(req.getAttribute(JwtAuthFilter.ATTR_EXPIRADA));
+            boolean inactiva = Boolean.TRUE.equals(req.getAttribute(JwtAuthFilter.ATTR_INACTIVA));
             escribir(res, 401, "No autenticado",
-                    expirada ? "Su sesión ha expirado por inactividad" : "Debe iniciar sesión para acceder");
+                    expirada ? "Su sesión ha expirado por inactividad"
+                    : inactiva ? "Su cuenta está inactiva. Contacte al administrador"
+                    : "Debe iniciar sesión para acceder");
         };
     }
 

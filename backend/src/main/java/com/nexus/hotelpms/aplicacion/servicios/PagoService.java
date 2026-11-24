@@ -35,7 +35,7 @@ public class PagoService {
     }
 
     public PagoResponse iniciarPago(String idOCodigo, PagoRequest req) {
-        Reserva r = reservaService.obtener(idOCodigo);
+        Reserva r = reservaService.obtenerParaCliente(idOCodigo, req.documento());
         if (r.getEstado() != EstadoReserva.Bloqueada) {
             throw new ReglaNegocioException("Solo se puede pagar una reserva en estado Bloqueada");
         }

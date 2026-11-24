@@ -150,12 +150,18 @@ function Accion-Reserva([string]$tipo) {
     Cabecera
     $id = Pedir "Código o ID de la reserva"
     if (-not $id) { return }
+    $doc = ""
+    if ($tipo -in @("pagar", "cancelar", "comprobante")) {
+        # Las operaciones públicas del cliente exigen, además del código, el documento del huésped.
+        $doc = Pedir "Documento del huésped (el de la reserva)"
+        if (-not $doc) { Mal "El documento del huésped es obligatorio"; Pausa; return }
+    }
     switch ($tipo) {
         "pagar" {
             Write-Host "    1 APROBADO   2 RECHAZADO   3 PENDIENTE"
             $op = Pedir "Resultado del pago" "1"
             $sim = @{ "1" = "APROBADO"; "2" = "RECHAZADO"; "3" = "PENDIENTE" }[$op]
-            $r = Api "POST" "/api/reservas/$id/pago" @{ banco = "1007"; simulacion = $sim }
+            $r = Api "POST" "/api/reservas/$id/pago" @{ banco = "1007"; simulacion = $sim; documento = $doc }
             if ($r.Status -eq 200) { Ok "Pago: $($r.Json.estadoPago)  ·  reserva: $($r.Json.estadoReserva)" } else { MostrarError $r }
         }
         "checkin" {
@@ -163,7 +169,7 @@ function Accion-Reserva([string]$tipo) {
             if ($r.Status -eq 200) { Ok "Check-in registrado · estado: $($r.Json.estado)" } else { MostrarError $r }
         }
         "cancelar" {
-            $r = Api "POST" "/api/reservas/$id/cancelar"
+            $r = Api "POST" "/api/reservas/$id/cancelar" @{ documento = $doc }
             if ($r.Status -eq 200) { Ok "Cancelada · política: $($r.Json.politica) · reembolso: $($r.Json.reembolso) · retenido: $($r.Json.retenido)" } else { MostrarError $r }
         }
         "noshow" {
@@ -179,7 +185,7 @@ function Accion-Reserva([string]$tipo) {
             } else { MostrarError $r }
         }
         "comprobante" {
-            $r = Api "GET" "/api/reservas/$id/comprobante"
+            $r = Api "GET" "/api/reservas/$id/comprobante?documento=$([uri]::EscapeDataString($doc))"
             if ($r.Status -eq 200) {
                 $f = Join-Path $env:TEMP "comprobante-$id.pdf"
                 [IO.File]::WriteAllBytes($f, $r.Bytes)
@@ -479,6 +485,11 @@ function Hab-Estado {
     $op = Pedir "Nuevo estado" "2"
     $est = if ($op -eq "1") { "Disponible" } else { "Mantenimiento" }
     $r = Api "POST" "/api/admin/habitaciones/$($h.id)/estado" @{ estado = $est }
+    if ($r.Status -eq 409) {
+        Write-Host "  ⚠ $($r.Json.mensaje)" -ForegroundColor Yellow
+        if ((Pedir "¿Confirmar el cambio de todas formas? (s/n)" "n") -ne "s") { Info "Sin cambios."; Pausa; return }
+        $r = Api "POST" "/api/admin/habitaciones/$($h.id)/estado" @{ estado = $est; confirmar = $true }
+    }
     if ($r.Status -eq 200) {
         Ok "Habitación $($h.numero) ahora está en $($r.Json.habitacion.estado)"
         if ($r.Json.reservasFuturasAfectadas -gt 0) { Write-Host "  ⚠ Tiene $($r.Json.reservasFuturasAfectadas) reserva(s) futura(s) que podrían verse afectadas." -ForegroundColor Yellow }
@@ -764,6 +775,24 @@ function Menu-Cliente {
     }
 }
 
+# ---------------------------------------------------------------- Cambiar la propia contraseña
+function Texto-Seguro($segura) {
+    return [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($segura))
+}
+
+function Cambiar-Password {
+    Cabecera
+    Info "Cambiar mi contraseña (mínimo 8 caracteres)"
+    Write-Host ""
+    $actual = Texto-Seguro (Read-Host "  Contraseña actual" -AsSecureString)
+    $nueva = Texto-Seguro (Read-Host "  Contraseña nueva" -AsSecureString)
+    $repite = Texto-Seguro (Read-Host "  Repite la contraseña nueva" -AsSecureString)
+    if ($nueva -ne $repite) { Mal "Las contraseñas nuevas no coinciden"; Pausa; return }
+    $r = Api "POST" "/api/auth/cambiar-password" @{ passwordActual = $actual; passwordNueva = $nueva }
+    if ($r.Status -eq 200) { Ok "Contraseña actualizada. Úsala la próxima vez que inicies sesión." } else { MostrarError $r }
+    Pausa
+}
+
 # ---------------------------------------------------------------- RECEPCIÓN (HU-06 a HU-12)
 function Menu-Recepcion {
     while ($script:token) {
@@ -776,6 +805,7 @@ function Menu-Recepcion {
         Write-Host "    5  Check-out (HU-10)"
         Write-Host "    6  Habitaciones en limpieza y habilitación (HU-11)"
         Write-Host "    7  Ver factura de la reserva (HU-12)"
+        Write-Host "    8  Cambiar mi contraseña"
         Write-Host ""
         Write-Host "    0  Cerrar sesión"
         switch (Pedir "Opción") {
@@ -786,6 +816,7 @@ function Menu-Recepcion {
             "5" { Check-out }
             "6" { Habitaciones-Limpieza }
             "7" { Accion-Reserva "factura" }
+            "8" { Cambiar-Password }
             "0" { Cerrar-Sesion; return }
             default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
         }
@@ -802,6 +833,7 @@ function Menu-Admin {
         Write-Host "    3  Inventario de habitaciones (HU-15)"
         Write-Host "    4  Catálogo de consumos (HU-16)"
         Write-Host "    5  Reportes de ocupación e ingresos (HU-17)"
+        Write-Host "    6  Cambiar mi contraseña"
         Write-Host ""
         Write-Host "    0  Cerrar sesión"
         switch (Pedir "Opción") {
@@ -810,6 +842,7 @@ function Menu-Admin {
             "3" { Menu-Admin-Habitaciones }
             "4" { Menu-Admin-Catalogo }
             "5" { Admin-Reporte }
+            "6" { Cambiar-Password }
             "0" { Cerrar-Sesion; return }
             default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
         }

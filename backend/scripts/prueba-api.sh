@@ -24,9 +24,10 @@ I=$(curl -s -X POST $B/api/admin/catalogo -H "Authorization: Bearer $A" -H 'Cont
 c "HU-16 editar item" "$(curl -s -o /dev/null -w %{http_code} -X PUT $B/api/admin/catalogo/$I -H "Authorization: Bearer $A" -H 'Content-Type: application/json' -d '{"nombre":"Gaseosa 350","precio":4500,"categoria":"Minibar"}')"
 c "HU-16 inactivar item" "$(curl -s -o /dev/null -w %{http_code} -X POST $B/api/admin/catalogo/$I/estado -H "Authorization: Bearer $A" -H 'Content-Type: application/json' -d '{"activa":false}')"
 # HU-02..HU-12 flujo completo en la habitación nueva
-F=$(curl -s -X POST $B/api/reservas -H 'Content-Type: application/json' -d "{\"sedeId\":\"$SN\",\"habitacionId\":\"$H\",\"fechaEntrada\":\"$(date +%F)\",\"fechaSalida\":\"$(date -d "+2 days" +%F 2>/dev/null || date +%F)\",\"numHuespedes\":2,\"clienteNombre\":\"Ana Prueba\",\"clienteDocumento\":\"1098$RANDOM\",\"clienteEmail\":\"ana@correo.com\"}" | j); c "HU-02 crear reserva" "$F"
-c "HU-03 pagar PSE aprobado" "$(curl -s -o /dev/null -w %{http_code} -X POST $B/api/reservas/$F/pago -H 'Content-Type: application/json' -d '{"banco":"1007","simulacion":"APROBADO"}')"
-c "HU-05 comprobante" "$(curl -s -o /dev/null -w %{http_code} $B/api/reservas/$F/comprobante)"
+DOC="1098$RANDOM"
+F=$(curl -s -X POST $B/api/reservas -H 'Content-Type: application/json' -d "{\"sedeId\":\"$SN\",\"habitacionId\":\"$H\",\"fechaEntrada\":\"$(date +%F)\",\"fechaSalida\":\"$(date -d "+2 days" +%F 2>/dev/null || date +%F)\",\"numHuespedes\":2,\"clienteNombre\":\"Ana Prueba\",\"clienteDocumento\":\"$DOC\",\"clienteEmail\":\"ana@correo.com\"}" | j); c "HU-02 crear reserva" "$F"
+c "HU-03 pagar PSE aprobado" "$(curl -s -o /dev/null -w %{http_code} -X POST $B/api/reservas/$F/pago -H 'Content-Type: application/json' -d "{\"banco\":\"1007\",\"simulacion\":\"APROBADO\",\"documento\":\"$DOC\"}")"
+c "HU-05 comprobante" "$(curl -s -o /dev/null -w %{http_code} $B/api/reservas/$F/comprobante?documento=$DOC)"
 c "HU-08 check-in" "$(curl -s -o /dev/null -w %{http_code} -X POST $B/api/reservas/$F/checkin -H "Authorization: Bearer $R")"
 c "HU-09 consumo (hab ocupada)" "$(curl -s -o /dev/null -w %{http_code} -X POST $B/api/habitaciones/$H/consumos -H "Authorization: Bearer $R" -H 'Content-Type: application/json' -d "{\"catalogoItemId\":\"$(curl -s "$B/api/catalogo?sedeId=$SN" -H "Authorization: Bearer $R" | python -c "import json,sys;print([i['id'] for i in json.load(sys.stdin) if i['nombre'].startswith('Agua')][0])")\",\"cantidad\":2}")"
 c "HU-10 checkout confirmar" "$(curl -s -o /dev/null -w %{http_code} -X POST "$B/api/habitaciones/$H/checkout?confirmar=true" -H "Authorization: Bearer $R")"

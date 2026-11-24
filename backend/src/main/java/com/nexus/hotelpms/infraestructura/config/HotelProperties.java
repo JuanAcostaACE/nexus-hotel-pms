@@ -18,4 +18,6 @@ public record HotelProperties(
         @DefaultValue("15") int sesionMinutos,
         @DefaultValue("cambia-este-secreto-jwt-de-al-menos-32-caracteres") String jwtSecret,
         @DefaultValue("true") boolean seedHabilitado,
-        @DefaultValue("http://localhost:*,http://127.0.0.1:*") String corsOrigenes) { }
+        @DefaultValue("http://localhost:*,http://127.0.0.1:*") String corsOrigenes,
+        @DefaultValue("Admin123*") String seedAdminPassword,
+        @DefaultValue("Recep123*") String seedRecepPassword) { }

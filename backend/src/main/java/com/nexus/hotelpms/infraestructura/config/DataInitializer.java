@@ -43,9 +43,9 @@ public class DataInitializer implements CommandLineRunner {
         Sede norte = sedes.save(new Sede("Sede Norte", "Calle 100 # 15-20, Bogotá"));
         Sede sur = sedes.save(new Sede("Sede Sur", "Carrera 30 # 5-10, Bogotá"));
 
-        usuarios.save(new Administrador("Administrador General", "admin@hotel.com", encoder.encode("Admin123*")));
-        usuarios.save(new Recepcionista("Recepción Norte", "recepcionista@hotel.com", encoder.encode("Recep123*"), norte.getId()));
-        usuarios.save(new Recepcionista("Recepción Sur", "recepcion.sur@hotel.com", encoder.encode("Recep123*"), sur.getId()));
+        usuarios.save(new Administrador("Administrador General", "admin@hotel.com", encoder.encode(props.seedAdminPassword())));
+        usuarios.save(new Recepcionista("Recepción Norte", "recepcionista@hotel.com", encoder.encode(props.seedRecepPassword()), norte.getId()));
+        usuarios.save(new Recepcionista("Recepción Sur", "recepcion.sur@hotel.com", encoder.encode(props.seedRecepPassword()), sur.getId()));
 
         for (Sede s : new Sede[]{norte, sur}) {
             habitaciones.guardar(new Habitacion(s.getId(), "101", "Simple", 1, new BigDecimal("120000")));

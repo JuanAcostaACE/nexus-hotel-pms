@@ -28,6 +28,7 @@ La cadena de conexión **no está en el código ni en este repositorio**: se lee
 | `PORT` | No | `8080` | Puerto del servidor |
 | `JWT_SECRET` | No | valor de desarrollo | Secreto para firmar los JWT (cámbialo fuera de pruebas) |
 | `PSE_WEBHOOK_SECRET` | No | `nexus-pse-secreto` | Valor esperado en la cabecera `X-PSE-Secret` del webhook |
+| `SEED_ADMIN_PASSWORD` / `SEED_RECEP_PASSWORD` | No | `Admin123*` / `Recep123*` | Contraseñas de los usuarios de prueba que se crean con la base vacía. **Solo desarrollo**: defínelas en cualquier despliegue público |
 | `CORS_ORIGENES` | No | `http://localhost:*,http://127.0.0.1:*` | Orígenes del frontend web permitidos, separados por coma (admite comodines, p. ej. `https://*.vercel.app`) |
 
 ## Ejecutar
@@ -54,7 +55,9 @@ Al primer arranque, si la base no tiene sedes, se crean **datos de prueba**:
 | Habitaciones (en cada sede) | 101 Simple (1 pers.), 102 Doble (2), 201 Familiar (4), 205 Doble (2) |
 | Catálogo (en cada sede) | Agua mineral 500ml, Almuerzo ejecutivo, Botella de vino (inactivo) |
 
-Estas credenciales son solo para desarrollo y pruebas.
+> **Seguridad.** Estas credenciales por defecto están en el código y en este README, que son públicos. Úsalas solo en local.
+> En cualquier despliegue (Railway, etc.) cámbialas: define `SEED_ADMIN_PASSWORD` y `SEED_RECEP_PASSWORD` antes del primer
+> arranque, o, si la base ya está sembrada, inicia sesión y usa `POST /api/auth/cambiar-password`.
 
 ## Despliegue (Railway) y frontend web
 El backend se publica tal cual en [Railway](https://railway.app) (Maven + Java 17, `system.properties`):
@@ -68,7 +71,7 @@ El cliente de terminal funciona contra el backend publicado: `scripts
 exus.ps1 -BaseUrl https://TU-URL`.
 
 ## Pruebas
-- **Unitarias** (dominio y patrón Strategy, no necesitan Mongo): `mvn test`
+- **Unitarias** (dominio, patrón Strategy, reglas de administración y seguridad; no necesitan Mongo): `mvn test` (36 pruebas)
 - **Demostración en terminal** (recorre HU-01 a HU-17 con pausas, colores y verificación de cada código HTTP):
   `powershell -ExecutionPolicy Bypass -File scripts\demo.ps1` (opciones: `-BaseUrl`, `-Auto` para correr sin pausas,
   `-AbrirPdf` para abrir el comprobante y la factura al final). Necesita el backend en marcha y crea datos de prueba.
@@ -81,7 +84,7 @@ exus.ps1 -BaseUrl https://TU-URL`.
 2. Variable `baseUrl`: `http://localhost:8081` por defecto; cámbiala si usas otro puerto.
 3. Ejecuta primero la carpeta **00** (guarda tokens e IDs en variables) y luego cada carpeta en orden con *Collection Runner*.
 4. Cada request trae sus pruebas (`pm.test`): verde = la regla de la HU se cumple. Las fechas se calculan solas.
-5. La colección tiene 50 requests (HU-01 a HU-17) y se puede ejecutar varias veces seguidas: cada corrida crea sus propios datos
+5. La colección tiene 55 requests (HU-01 a HU-17) y se puede ejecutar varias veces seguidas: cada corrida crea sus propios datos
    (sede, usuario, habitación e ítem con nombres únicos) y deja libres las habitaciones de prueba. Los datos creados quedan en la base.
 
 El campo `simulacion` de `POST /api/reservas/{id}/pago` acepta `APROBADO`, `RECHAZADO` o `PENDIENTE`
@@ -97,12 +100,13 @@ tras **15 minutos sin actividad** (HU-06).
 | HU | Método y ruta | Acceso |
 |---|---|---|
 | 06 | `POST /api/auth/login` | público |
+| 06 | `POST /api/auth/cambiar-password` (body: `passwordActual`, `passwordNueva`, mínimo 8) | sesión |
 | 06 | `GET /api/admin/usuarios`, `POST /api/admin/usuarios/{id}/desbloquear` | Administrador |
 | 01 | `GET /api/sedes`, `GET /api/sedes/{sedeId}/disponibilidad?fechaEntrada&fechaSalida&huespedes` | público |
 | 02 | `POST /api/reservas` (bloquea 15 min) | público |
-| 03 | `POST /api/reservas/{id}/pago`, `POST /api/webhooks/pse` (cabecera `X-PSE-Secret`) | público |
-| 04 | `POST /api/reservas/{id}/cancelar` | público |
-| 05 | `GET /api/reservas/{id}/comprobante` (PDF con QR) | público |
+| 03 | `POST /api/reservas/{id}/pago` (body: `banco`, `simulacion`, `documento`), `POST /api/webhooks/pse` (cabecera `X-PSE-Secret`) | público (con código + documento) |
+| 04 | `POST /api/reservas/{id}/cancelar` (body: `documento`) | público (con código + documento) |
+| 05 | `GET /api/reservas/{id}/comprobante?documento=` (PDF con QR) | público (con código + documento) |
 | 07 | `GET /api/reservas/buscar?cedula=` o `?id=`, `GET /api/reservas/{id}` | sesión |
 | 08 | `POST /api/reservas/{id}/checkin`, `POST /api/reservas/{id}/no-show` | sesión |
 | 09 | `GET /api/catalogo`, `POST/GET /api/habitaciones/{id}/consumos`, `POST /api/consumos/{id}/anular` | sesión |
@@ -145,6 +149,22 @@ el administrador ve todas.
 `OK/FAILED/PENDING`) al puerto `IPagoGateway` que usa la aplicación.
 
 ## Decisiones y supuestos (donde las HU no especifican)
+- **Operaciones públicas del cliente** (pago, cancelación y comprobante): además del código de la reserva se exige el **documento del
+  huésped**. Los códigos son consecutivos (`RSV-AAAAMMDD-001`), así que sin ese segundo dato cualquiera podría operar reservas ajenas.
+  Si el documento no coincide la respuesta es la misma que si la reserva no existiera.
+- **Estados de habitación y administrador (HU-11/HU-15):** el administrador solo puede pasar una habitación a *Disponible* o
+  *Mantenimiento*, y solo desde estados que lo permiten (no desde Ocupada, Bloqueada ni Reservada→Disponible). *Ocupada*, *Bloqueada* y
+  *Reservada* los gobierna el flujo de la reserva. Enviar a Mantenimiento una habitación con reservas pagadas vigentes exige
+  `confirmar: true` (si no, 409); al volver a Disponible, una habitación con reserva pagada queda *Reservada*. Cancelar una reserva no
+  saca una habitación de Mantenimiento.
+- **Sesión (HU-06/HU-14):** en cada petición se consulta al usuario en la base. Si la cuenta se desactiva, la sesión deja de servir; la sede
+  sale del registro actual, así que una reasignación de sede surte efecto de inmediato.
+- Los correos se guardan y comparan en minúsculas (con `Juan@Hotel.com` y `juan@hotel.com` es el mismo usuario).
+- **Reportes (HU-17):** los ingresos incluyen lo retenido en cancelaciones con penalidad (ingreso parcial, según el supuesto de la HU).
+- **Disponibilidad (HU-01):** se basa en el estado de la habitación (como pide la HU), no en solapamiento de fechas: una habitación con
+  una reserva pagada para una fecha lejana figura como *Reservada* también para fechas anteriores. Es una limitación del modelo de
+  estados de las HU.
+- El campo `simulacion` del pago solo existe para el simulador de PSE; con una pasarela real se eliminaría.
 - Bloqueo de habitación **atómico** en MongoDB (`findAndModify` Disponible→Bloqueada): dos clientes simultáneos → uno recibe 409.
 - Con pago `Pendiente` la reserva pasa a `PendienteConfirmacion` y **se suspende** el temporizador de 15 min.
 - Pago rechazado → reserva `Cancelada` y habitación `Disponible`.

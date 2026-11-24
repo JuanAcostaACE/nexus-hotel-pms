@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "ee4490d7-5715-4009-8813-bc7a7375dd87",
+    "_postman_id": "b275807d-64f5-4218-bfe1-9b7ff630cee8",
     "name": "Nexus Hotel PMS · Colección sencilla (HU 01-17)",
     "description": "Colección reducida: un folder por historia de usuario (o grupo). Ejecutar en orden: folder 00 primero.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -560,6 +560,51 @@
           ]
         },
         {
+          "name": "Pagar con un documento que no es del huésped → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "pago"
+              ]
+            },
+            "description": "Pagar, cancelar y bajar el comprobante exigen el código Y el documento del huésped.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\",\n  \"documento\": \"000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Pagar con PSE (APROBADO)",
           "request": {
             "method": "POST",
@@ -567,10 +612,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tokenRecep}}"
               }
             ],
             "url": {
@@ -588,7 +629,7 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\"\n}",
+              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\",\n  \"documento\": \"1098765432\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -720,10 +761,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tokenRecep}}"
               }
             ],
             "url": {
@@ -741,7 +778,7 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\"\n}",
+              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\",\n  \"documento\": \"77\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -762,13 +799,13 @@
           ]
         },
         {
-          "name": "Cancelar con >48 h → reembolso total",
+          "name": "Cancelar con un documento que no es del huésped → 404",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer {{tokenRecep}}"
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
@@ -783,7 +820,61 @@
                 "cancelar"
               ]
             },
-            "description": "La estrategia elegida debe ser ReembolsoTotal."
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"000\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar con >48 h → reembolso total",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvCancel}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvCancel}}",
+                "cancelar"
+              ]
+            },
+            "description": "La estrategia elegida debe ser ReembolsoTotal.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"77\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "event": [
             {
@@ -803,15 +894,10 @@
       "name": "HU-05 · HU-07 · Comprobante y búsqueda en mostrador · Diagrama: componentes",
       "item": [
         {
-          "name": "Comprobante PDF con QR (pago aprobado)",
+          "name": "Comprobante sin el documento del huésped → 404",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{tokenRecep}}"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/comprobante",
               "host": [
@@ -822,6 +908,43 @@
                 "reservas",
                 "{{rsvId}}",
                 "comprobante"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobante PDF con QR (pago aprobado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/comprobante?documento=1098765432",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "comprobante"
+              ],
+              "query": [
+                {
+                  "key": "documento",
+                  "value": "1098765432"
+                }
               ]
             },
             "description": ""
@@ -2101,6 +2224,104 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forzar el estado Ocupada → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones/{{nuevaHabId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones",
+                "{{nuevaHabId}}",
+                "estado"
+              ]
+            },
+            "description": "Ocupada, Reservada y Bloqueada los gobierna la reserva; el administrador solo usa Disponible y Mantenimiento.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"Ocupada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Habitación con número repetido → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"numero\": \"{{numeroHab}}\",\n  \"tipo\": \"Doble\",\n  \"capacidadMax\": 2,\n  \"precioBase\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));"
                 ]
               }
             }

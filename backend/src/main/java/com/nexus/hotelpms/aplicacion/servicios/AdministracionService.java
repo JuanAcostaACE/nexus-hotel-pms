@@ -6,9 +6,11 @@ import com.nexus.hotelpms.aplicacion.puertos.IHabitacionRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IReservaRepository;
 import com.nexus.hotelpms.aplicacion.puertos.ISedeRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IUsuarioRepository;
+import com.nexus.hotelpms.dominio.excepcion.ConflictoException;
 import com.nexus.hotelpms.dominio.excepcion.RecursoNoEncontradoException;
 import com.nexus.hotelpms.dominio.excepcion.ReglaNegocioException;
 import com.nexus.hotelpms.dominio.modelo.*;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -92,10 +94,11 @@ public class AdministracionService {
     /** HU-14: edita nombre y correo; el rol y la sede no cambian. */
     public Usuario actualizarUsuario(String usuarioId, String nombre, String email) {
         Usuario u = buscarUsuario(usuarioId);
-        usuarios.findByEmail(email).filter(otro -> !otro.getId().equals(usuarioId)).ifPresent(otro -> {
+        String correo = normalizarCorreo(email);
+        usuarios.findByEmail(correo).filter(otro -> !otro.getId().equals(usuarioId)).ifPresent(otro -> {
             throw new ReglaNegocioException("Ya existe un usuario con ese correo");
         });
-        u.actualizarDatos(nombre, email);
+        u.actualizarDatos(nombre.trim(), correo);
         return usuarios.save(u);
     }
 
@@ -110,10 +113,11 @@ public class AdministracionService {
 
     public Usuario crearRecepcionista(String nombre, String email, String password, String sedeId) {
         validarSede(sedeId);
-        if (usuarios.findByEmail(email).isPresent()) {
+        String correo = normalizarCorreo(email);
+        if (usuarios.findByEmail(correo).isPresent()) {
             throw new ReglaNegocioException("Ya existe un usuario con ese correo");
         }
-        return usuarios.save(new Recepcionista(nombre, email, encoder.encode(password), sedeId));
+        return usuarios.save(new Recepcionista(nombre.trim(), correo, encoder.encode(password), sedeId));
     }
 
     public Usuario reasignarSede(String usuarioId, String nuevaSedeId) {
@@ -137,7 +141,16 @@ public class AdministracionService {
 
     public Habitacion crearHabitacion(String sedeId, String numero, String tipo, int capacidad, BigDecimal precio) {
         validarSede(sedeId);
-        return habitaciones.guardar(new Habitacion(sedeId, numero, tipo, capacidad, precio));
+        String num = numero.trim();
+        String mensaje = "Ya existe una habitación con el número " + num + " en esta sede";
+        if (habitaciones.buscarPorSede(sedeId).stream().anyMatch(h -> h.getNumero().equalsIgnoreCase(num))) {
+            throw new ConflictoException(mensaje);
+        }
+        try {
+            return habitaciones.guardar(new Habitacion(sedeId, num, tipo.trim(), capacidad, precio));
+        } catch (DuplicateKeyException e) {
+            throw new ConflictoException(mensaje);
+        }
     }
 
     public Habitacion actualizarHabitacion(String id, String tipo, int capacidad, BigDecimal precio) {
@@ -148,23 +161,37 @@ public class AdministracionService {
     }
 
     /**
-     * Cambio de estado administrativo (p. ej. Mantenimiento). No se puede sacar de servicio una
-     * habitación ocupada; las reservas futuras se devuelven en la respuesta como advertencia.
+     * Cambio de estado administrativo (HU-11 / HU-15). Solo Disponible y Mantenimiento, con las transiciones que admite
+     * {@link Habitacion#cambiarEstadoAdministrativo}. Si la habitación tiene reservas pagadas vigentes, enviarla a
+     * Mantenimiento exige confirmación explícita ({@code confirmar=true}); y al volver a Disponible una habitación con
+     * reserva pagada queda Reservada, para que nadie más pueda reservarla.
      */
-    public Map<String, Object> cambiarEstadoHabitacion(String id, EstadoHabitacion nuevo) {
+    public Map<String, Object> cambiarEstadoHabitacion(String id, EstadoHabitacion nuevo, boolean confirmar) {
         Habitacion h = habitaciones.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Habitación no encontrada"));
-        if (h.getEstado() == EstadoHabitacion.Ocupada && nuevo == EstadoHabitacion.Mantenimiento) {
-            throw new ReglaNegocioException("No se puede enviar a mantenimiento una habitación ocupada");
+        long vigentes = reservasPagadasDe(h);
+        if (nuevo == EstadoHabitacion.Mantenimiento && h.getEstado() != EstadoHabitacion.Mantenimiento
+                && vigentes > 0 && !confirmar) {
+            throw new ConflictoException("La habitación tiene " + vigentes
+                    + " reserva(s) pagada(s) vigente(s) que se verían afectadas. Confirme para continuar");
         }
-        h.cambiarEstado(nuevo);
+        EstadoHabitacion antes = h.getEstado();
+        h.cambiarEstadoAdministrativo(nuevo);
+        if (nuevo == EstadoHabitacion.Disponible && antes != EstadoHabitacion.Disponible && vigentes > 0) {
+            h.cambiarEstado(EstadoHabitacion.Reservada);
+        }
         habitaciones.guardar(h);
-        long futuras = reservas.buscarPorSede(h.getSedeId()).stream()
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("habitacion", h);
+        r.put("reservasFuturasAfectadas", vigentes);
+        return r;
+    }
+
+    private long reservasPagadasDe(Habitacion h) {
+        return reservas.buscarPorSede(h.getSedeId()).stream()
                 .filter(r -> h.getId().equals(r.getHabitacionId()))
-                .filter(r -> CONFIRMADAS.contains(r.getEstado()))
-                .filter(r -> r.getFechaEntrada().isAfter(LocalDate.now()))
+                .filter(r -> r.getEstado() == EstadoReserva.Pagada)
                 .count();
-        return Map.of("habitacion", h, "reservasFuturasAfectadas", futuras);
     }
 
     // ---------- HU-16: catálogo de consumos ----------
@@ -223,13 +250,18 @@ public class AdministracionService {
     }
 
     /**
-     * Ingresos de la sede en el rango: reservas confirmadas cuya fecha de salida cae dentro del período.
-     * Detalla ingresos por estadía, por recargo de salida tardía y por consumos (sin los anulados) y el total general.
+     * Ingresos de la sede en el rango: reservas confirmadas cuya fecha de salida cae dentro del período, más lo
+     * retenido en cancelaciones con penalidad (generaron ingreso parcial, HU-17). Se detallan estadía, recargo por
+     * salida tardía, consumos (sin los anulados) y penalidades, y el total general.
      */
     public Map<String, Object> ingresos(String sedeId, LocalDate inicio, LocalDate fin) {
         validarParametrosReporte(sedeId, inicio, fin);
         List<Reserva> enRango = reservasConfirmadas(sedeId).stream()
-                .filter(r -> !r.getFechaSalida().isBefore(inicio) && !r.getFechaSalida().isAfter(fin))
+                .filter(r -> salidaEnRango(r, inicio, fin))
+                .collect(Collectors.toList());
+        List<Reserva> conPenalidad = reservas.buscarPorSede(sedeId).stream()
+                .filter(r -> r.getEstado() == EstadoReserva.CanceladaConPenalidad)
+                .filter(r -> salidaEnRango(r, inicio, fin))
                 .collect(Collectors.toList());
         BigDecimal estadia = enRango.stream().map(Reserva::getValorTotal)
                 .map(v -> v == null ? BigDecimal.ZERO : v).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -240,7 +272,9 @@ public class AdministracionService {
                 .filter(c -> !c.isAnulado())
                 .map(Consumo::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal total = estadia.add(recargo).add(porConsumos);
+        BigDecimal penalidades = conPenalidad.stream().map(Reserva::getValorRetenido)
+                .map(v -> v == null ? BigDecimal.ZERO : v).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = estadia.add(recargo).add(porConsumos).add(penalidades);
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("sedeId", sedeId);
         r.put("fechaInicio", inicio);
@@ -248,13 +282,19 @@ public class AdministracionService {
         r.put("ingresosEstadia", estadia);
         r.put("ingresosRecargoSalidaTardia", recargo);
         r.put("ingresosConsumos", porConsumos);
+        r.put("ingresosPenalidades", penalidades);
         r.put("total", total);
         r.put("ingresos", total);
         r.put("reservasIncluidas", enRango.size());
-        if (enRango.isEmpty()) {
+        r.put("cancelacionesConPenalidad", conPenalidad.size());
+        if (enRango.isEmpty() && conPenalidad.isEmpty()) {
             r.put("mensaje", "No hay datos para el período seleccionado");
         }
         return r;
+    }
+
+    private static boolean salidaEnRango(Reserva r, LocalDate inicio, LocalDate fin) {
+        return !r.getFechaSalida().isBefore(inicio) && !r.getFechaSalida().isAfter(fin);
     }
 
     // ---------- auxiliares ----------
@@ -289,6 +329,11 @@ public class AdministracionService {
         if (sedeId == null || sedes.findById(sedeId).isEmpty()) {
             throw new RecursoNoEncontradoException("Sede no encontrada");
         }
+    }
+
+    /** El inicio de sesión busca el correo en minúsculas, así que se guarda siempre normalizado. */
+    private static String normalizarCorreo(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 
     private Usuario buscarUsuario(String id) {
