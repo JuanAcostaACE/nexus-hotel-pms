@@ -17,6 +17,8 @@
 ---
 ##Vista logica
 ---
+<img width="1227" height="875" alt="diagrama vista de desarrollo(por capas) (5)" src="https://github.com/user-attachments/assets/72802b6a-ac87-4e53-8d79-2d3c48bfd8f0" />
+
 
 
 ---
