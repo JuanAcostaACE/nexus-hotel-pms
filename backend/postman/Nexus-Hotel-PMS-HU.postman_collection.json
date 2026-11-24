@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "8c5f2a9a-afb2-4672-bc86-dc2511947edd",
+    "_postman_id": "ee4490d7-5715-4009-8813-bc7a7375dd87",
     "name": "Nexus Hotel PMS · Colección sencilla (HU 01-17)",
     "description": "Colección reducida: un folder por historia de usuario (o grupo). Ejecutar en orden: folder 00 primero.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -8,7 +8,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8081"
     },
     {
       "key": "tokenRecep",
@@ -48,6 +48,42 @@
     },
     {
       "key": "hab205",
+      "value": ""
+    },
+    {
+      "key": "sedeSurId",
+      "value": ""
+    },
+    {
+      "key": "nuevaSedeId",
+      "value": ""
+    },
+    {
+      "key": "nuevoUsuarioId",
+      "value": ""
+    },
+    {
+      "key": "nuevoEmail",
+      "value": ""
+    },
+    {
+      "key": "nuevaHabId",
+      "value": ""
+    },
+    {
+      "key": "numeroHab",
+      "value": ""
+    },
+    {
+      "key": "nuevoItemId",
+      "value": ""
+    },
+    {
+      "key": "sufijo",
+      "value": ""
+    },
+    {
+      "key": "en7dias",
       "value": ""
     },
     {
@@ -153,7 +189,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set('tokenSur', pm.response.json().token);"
+                  "pm.collectionVariables.set('tokenSur', pm.response.json().token);",
+                  "pm.collectionVariables.set('sedeSurId', pm.response.json().sedeId);"
                 ]
               }
             }
@@ -1434,7 +1471,205 @@
       ]
     },
     {
-      "name": "HU-13 · HU-14 · Administración (solo Administrador) · Diagrama: despliegue + clases",
+      "name": "HU-13 · Sedes (solo Administrador) · Diagrama: despliegue + clases",
+      "item": [
+        {
+          "name": "Recepcionista intenta función de admin → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear sede",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/sedes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "sedes"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede Prueba {{sufijo}}\",\n  \"direccion\": \"Calle 1 # 2-3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('nuevaSedeId', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('sufijo', String(Date.now()).slice(-6));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar sede",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/sedes/{{nuevaSedeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "sedes",
+                "{{nuevaSedeId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sede Prueba Editada\",\n  \"direccion\": \"Calle 4 # 5-6\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inactivar sede",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/sedes/{{nuevaSedeId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "sedes",
+                "{{nuevaSedeId}}",
+                "estado"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activa\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Sede inactiva', () => pm.expect(pm.response.json().activa).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-14 · Usuarios y roles · Diagrama: clases (herencia Usuario)",
       "item": [
         {
           "name": "Listar usuarios (admin)",
@@ -1472,13 +1707,17 @@
           ]
         },
         {
-          "name": "Recepcionista intenta función de admin → 403",
+          "name": "Crear recepcionista en Sede Norte",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
                 "key": "Authorization",
-                "value": "Bearer {{tokenRecep}}"
+                "value": "Bearer {{tokenAdmin}}"
               }
             ],
             "url": {
@@ -1492,6 +1731,111 @@
                 "usuarios"
               ]
             },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Recepcionista Prueba\",\n  \"email\": \"{{nuevoEmail}}\",\n  \"password\": \"Prueba123*\",\n  \"sedeId\": \"{{sedeNorteId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('nuevoUsuarioId', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('nuevoEmail', 'prueba'+Date.now()+'@hotel.com');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reasignar a Sede Sur",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usuarios/{{nuevoUsuarioId}}/sede",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "usuarios",
+                "{{nuevoUsuarioId}}",
+                "sede"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeSurId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dar de baja (inactivar)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usuarios/{{nuevoUsuarioId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "usuarios",
+                "{{nuevoUsuarioId}}"
+              ]
+            },
             "description": ""
           },
           "event": [
@@ -1500,7 +1844,51 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Usuario inactivo no puede iniciar sesión → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{nuevoEmail}}\",\n  \"password\": \"Prueba123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
                 ]
               }
             }
@@ -1509,10 +1897,385 @@
       ]
     },
     {
-      "name": "HU-15 a HU-17 · Fase 2 (pendiente)",
+      "name": "HU-15 · Inventario de habitaciones (admin) · Diagrama: clases (Habitacion) + estados",
       "item": [
         {
-          "name": "Pendiente: inventario de habitaciones (HU-15)",
+          "name": "Crear habitación en Sede Norte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"numero\": \"{{numeroHab}}\",\n  \"tipo\": \"Doble\",\n  \"capacidadMax\": 2,\n  \"precioBase\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('nuevaHabId', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('numeroHab', String(300+Math.floor(Math.random()*600)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar habitación",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones/{{nuevaHabId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones",
+                "{{nuevaHabId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"Suite\",\n  \"capacidadMax\": 3,\n  \"precioBase\": 200000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enviar a Mantenimiento",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones/{{nuevaHabId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones",
+                "{{nuevaHabId}}",
+                "estado"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"Mantenimiento\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restaurar a Disponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/habitaciones/{{nuevaHabId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "habitaciones",
+                "{{nuevaHabId}}",
+                "estado"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"Disponible\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-16 · Catálogo de consumos (admin) · Diagrama: clases (CatalogoItem)",
+      "item": [
+        {
+          "name": "Crear ítem de catálogo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/catalogo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "catalogo"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"nombre\": \"Gaseosa {{sufijo}}\",\n  \"precio\": 4000,\n  \"categoria\": \"Minibar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('nuevoItemId', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('sufijo', String(Date.now()).slice(-6));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar ítem",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/catalogo/{{nuevoItemId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "catalogo",
+                "{{nuevoItemId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Gaseosa 350ml\",\n  \"precio\": 4500,\n  \"categoria\": \"Minibar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inactivar ítem (no borra el histórico)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/catalogo/{{nuevoItemId}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "catalogo",
+                "{{nuevoItemId}}",
+                "estado"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activa\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Ítem inactivo', () => pm.expect(pm.response.json().activo).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-17 · Reportes operativos (admin) · Diagrama: componentes (AdministracionService)",
+      "item": [
+        {
+          "name": "Reporte de ocupación (7 días)",
           "request": {
             "method": "GET",
             "header": [
@@ -1522,22 +2285,32 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/habitaciones?sedeId={{sedeNorteId}}",
+              "raw": "{{baseUrl}}/api/admin/reportes/ocupacion?sedeId={{sedeNorteId}}&fechaInicio={{hoy}}&fechaFin={{en7dias}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "habitaciones"
+                "admin",
+                "reportes",
+                "ocupacion"
               ],
               "query": [
                 {
                   "key": "sedeId",
                   "value": "{{sedeNorteId}}"
+                },
+                {
+                  "key": "fechaInicio",
+                  "value": "{{hoy}}"
+                },
+                {
+                  "key": "fechaFin",
+                  "value": "{{en7dias}}"
                 }
               ]
             },
-            "description": "Se completará en Fase 2."
+            "description": ""
           },
           "event": [
             {
@@ -1545,7 +2318,121 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trae porcentajeOcupacion', () => pm.expect(pm.response.json()).to.have.property('porcentajeOcupacion'));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};",
+                  "pm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));",
+                  "const x=new Date();pm.collectionVariables.set('hoy',x.toISOString().slice(0,10));",
+                  "x.setDate(x.getDate()+7);pm.collectionVariables.set('en7dias',x.toISOString().slice(0,10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reporte de ingresos (7 días)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reportes/ingresos?sedeId={{sedeNorteId}}&fechaInicio={{hoy}}&fechaFin={{en7dias}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "reportes",
+                "ingresos"
+              ],
+              "query": [
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeNorteId}}"
+                },
+                {
+                  "key": "fechaInicio",
+                  "value": "{{hoy}}"
+                },
+                {
+                  "key": "fechaFin",
+                  "value": "{{en7dias}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Trae ingresos', () => pm.expect(pm.response.json()).to.have.property('ingresos'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rango inválido → 422",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/reportes/ocupacion?sedeId={{sedeNorteId}}&fechaInicio=2026-12-10&fechaFin=2026-12-01",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "reportes",
+                "ocupacion"
+              ],
+              "query": [
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeNorteId}}"
+                },
+                {
+                  "key": "fechaInicio",
+                  "value": "2026-12-10"
+                },
+                {
+                  "key": "fechaFin",
+                  "value": "2026-12-01"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
                 ]
               }
             }

@@ -57,19 +57,20 @@ Estas credenciales son solo para desarrollo y pruebas.
 
 ## Pruebas
 - **Unitarias** (dominio y patrón Strategy, no necesitan Mongo): `mvn test`
+- **Demostración en terminal** (recorre HU-01 a HU-17 con pausas, colores y verificación de cada código HTTP):
+  `powershell -ExecutionPolicy Bypass -File scripts\demo.ps1` (opciones: `-BaseUrl`, `-Auto` para correr sin pausas,
+  `-AbrirPdf` para abrir el comprobante y la factura al final). Necesita el backend en marcha y crea datos de prueba.
 - **Regresión de la API** (con el backend en marcha): `B=http://localhost:8081 bash scripts/prueba-api.sh`
   (por defecto usa el puerto 8081). Recorre HU-02 a HU-16 y muestra el código HTTP de cada paso.
   Crea datos de prueba (sede, habitaciones, reservas) en la base configurada.
 
 ## Probar con Postman
 1. *Import* → `postman/Nexus-Hotel-PMS-HU.postman_collection.json`.
-2. Variable `baseUrl`: `http://localhost:8080` por defecto; cámbiala al puerto que uses (p. ej. `8081`).
+2. Variable `baseUrl`: `http://localhost:8081` por defecto; cámbiala si usas otro puerto.
 3. Ejecuta primero la carpeta **00** (guarda tokens e IDs en variables) y luego cada carpeta en orden con *Collection Runner*.
 4. Cada request trae sus pruebas (`pm.test`): verde = la regla de la HU se cumple. Las fechas se calculan solas.
-5. Las reservas y consumos quedan guardados en la base: para repetir el flujo desde cero hay que usar una base limpia.
-
-> La colección cubre HU-01 a HU-12 y parte de HU-13/HU-14. Los requests de escritura de la Fase 2 (sedes, usuarios,
-> habitaciones, catálogo y reportes) se agregarán en una actualización de la colección.
+5. La colección tiene 50 requests (HU-01 a HU-17) y se puede ejecutar varias veces seguidas: cada corrida crea sus propios datos
+   (sede, usuario, habitación e ítem con nombres únicos) y deja libres las habitaciones de prueba. Los datos creados quedan en la base.
 
 El campo `simulacion` de `POST /api/reservas/{id}/pago` acepta `APROBADO`, `RECHAZADO` o `PENDIENTE`
 (sin distinguir mayúsculas); si se omite, el pago se aprueba. Los correos se escriben en el log (`[CORREO SIMULADO]`).
