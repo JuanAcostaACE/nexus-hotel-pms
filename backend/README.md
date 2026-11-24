@@ -101,11 +101,12 @@ tras **15 minutos sin actividad** (HU-06).
 ### Fase 2 (solo Administrador; un recepcionista recibe 403)
 | HU | Método y ruta | Descripción |
 |---|---|---|
-| 13 | `POST /api/admin/sedes`, `PUT /api/admin/sedes/{id}`, `POST /api/admin/sedes/{id}/estado` | Crear, editar y activar/inactivar sedes |
-| 14 | `POST /api/admin/usuarios`, `PUT /api/admin/usuarios/{id}/sede`, `DELETE /api/admin/usuarios/{id}` | Crear recepcionista, reasignar sede, baja lógica |
+| 13 | `GET /api/admin/sedes`, `POST /api/admin/sedes`, `PUT /api/admin/sedes/{id}`, `POST /api/admin/sedes/{id}/estado` | Listar todas (activas e inactivas), crear, editar y activar/inactivar sedes |
+| 13 | `GET /api/admin/reservas?sedeId=` | Reservas de la sede elegida |
+| 14 | `GET /api/admin/usuarios[?sedeId=]`, `POST /api/admin/usuarios`, `PUT /api/admin/usuarios/{id}`, `PUT /api/admin/usuarios/{id}/sede`, `DELETE /api/admin/usuarios/{id}` | Listar (todos o por sede), crear recepcionista, editar nombre/correo, reasignar sede, desactivar |
 | 15 | `POST /api/admin/habitaciones`, `PUT /api/admin/habitaciones/{id}`, `POST /api/admin/habitaciones/{id}/estado` | Inventario y cambio de estado (p. ej. Mantenimiento) |
-| 16 | `POST /api/admin/catalogo`, `PUT /api/admin/catalogo/{id}`, `POST /api/admin/catalogo/{id}/estado` | Catálogo de consumos; inactivar no borra el histórico |
-| 17 | `GET /api/admin/reportes/ocupacion`, `GET /api/admin/reportes/ingresos` (`?sedeId&fechaInicio&fechaFin`) | Reportes operativos por sede y rango |
+| 16 | `GET /api/admin/catalogo?sedeId=`, `POST /api/admin/catalogo`, `PUT /api/admin/catalogo/{id}`, `POST /api/admin/catalogo/{id}/estado` | Catálogo (activos e inactivos); inactivar no borra el histórico |
+| 17 | `GET /api/admin/reportes/ocupacion`, `GET /api/admin/reportes/ingresos` (`?sedeId&fechaInicio&fechaFin`) | Ocupación; ingresos desglosados en estadía, recargo, consumos y total general |
 
 ## Arquitectura (paquete base `com.nexus.hotelpms`)
 ```
@@ -119,7 +120,7 @@ infraestructura                         persistencia, pse (PseGatewayAdapter), c
 ```
 Dependencias: presentación → aplicación → dominio; la infraestructura implementa los puertos de la aplicación.
 
-**Aislamiento multi-sede:** el JWT lleva `sedeId`; un recepcionista solo ve y opera datos de su sede (si no, 404);
+**Aislamiento multi-sede:** el JWT lleva `sedeId`; un recepcionista solo ve y opera datos de su sede (si pide otra recibe 403 con "No tiene permisos para acceder a los datos de esta sede");
 el administrador ve todas.
 
 ## Patrones de diseño
@@ -146,6 +147,9 @@ el administrador ve todas.
 - La auditoría de anulaciones (consumo, motivo, responsable, timestamp del servidor) queda en el documento `consumos` y en el log.
 - Bloqueo de cuenta: tras 3 fallos queda bloqueada hasta que un administrador la desbloquee; el contador se reinicia con un login exitoso.
 - Baja de usuario (HU-14): lógica (`activo=false`); el usuario inactivo no puede iniciar sesión.
-- Reportes (HU-17): ocupación = noches vendidas / (habitaciones × noches del rango); ingresos = valor de reservas confirmadas
-  (`Pagada`, `EnCurso`, `PendienteDeCierre`, `Cerrada`) cuya fecha de salida cae en el rango.
+- Reportes (HU-17): ocupación = noches vendidas / (habitaciones × noches del rango); ingresos = reservas confirmadas
+  (`Pagada`, `EnCurso`, `PendienteDeCierre`, `Cerrada`) cuya fecha de salida cae en el rango, desglosados en estadía, recargo
+  por salida tardía y consumos (sin los anulados). Sin datos en el período, los valores salen en cero con un mensaje.
+- La "sede activa" del administrador (HU-13) no se guarda en el servidor: el administrador indica la sede en cada consulta
+  (`sedeId`), y el recepcionista siempre queda limitado a la suya.
 - Zona horaria del servidor para todos los timestamps oficiales: `America/Bogota`.

@@ -37,7 +37,7 @@ public abstract class Usuario {
      */
     public void autenticar(boolean credencialesValidas) {
         if (!activo) {
-            throw new CredencialesInvalidasException("Usuario inactivo");
+            throw new CredencialesInvalidasException("Su cuenta está inactiva. Contacte al administrador");
         }
         if (bloqueado) {
             throw new CuentaBloqueadaException("Su cuenta está bloqueada. Contacte al administrador");
@@ -57,6 +57,12 @@ public abstract class Usuario {
 
     public void desbloquear() { this.bloqueado = false; this.intentosFallidos = 0; }
     public void inactivar() { this.activo = false; }
+
+    /** HU-14: edita nombre y correo sin tocar el rol ni la sede. */
+    public void actualizarDatos(String nombre, String email) {
+        this.nombre = nombre;
+        this.email = email;
+    }
 
     /** Rol expuesto en el JWT. */
     public abstract String getRol();

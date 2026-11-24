@@ -41,12 +41,34 @@ public class ManejadorExcepciones {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> validacion(MethodArgumentNotValidException e) {
-        List<String> faltantes = e.getBindingResult().getFieldErrors().stream()
+        var errores = e.getBindingResult().getFieldErrors();
+        List<String> detalle = errores.stream()
                 .map(f -> f.getField() + ": " + f.getDefaultMessage()).toList();
-        return resp(HttpStatus.BAD_REQUEST, "Hay campos obligatorios faltantes o inválidos", faltantes);
+        String mensaje = errores.size() == 1
+                ? errores.get(0).getDefaultMessage()
+                : "Faltan campos obligatorios o son inválidos: "
+                        + String.join(", ", errores.stream().map(f -> f.getField()).distinct().toList());
+        return resp(HttpStatus.BAD_REQUEST, mensaje, detalle);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    /** Valores de enum inválidos (p. ej. categoría "Otro", HU-16) con la lista de valores permitidos. */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<Map<String, Object>> cuerpoIlegible(HttpMessageNotReadableException e) {
+        Throwable causa = e.getCause();
+        if (causa instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife
+                && ife.getTargetType() != null && ife.getTargetType().isEnum()) {
+            String campo = ife.getPath().isEmpty() ? "valor" : ife.getPath().get(ife.getPath().size() - 1).getFieldName();
+            String permitidos = String.join(", ", java.util.Arrays.stream(ife.getTargetType().getEnumConstants())
+                    .map(Object::toString).toList());
+            String msg = "categoria".equals(campo)
+                    ? "Categoría no válida. Valores permitidos: " + permitidos
+                    : "Valor no válido para '" + campo + "'. Valores permitidos: " + permitidos;
+            return resp(HttpStatus.BAD_REQUEST, msg, null);
+        }
+        return formato(e);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     ResponseEntity<Map<String, Object>> formato(Exception e) {
         return resp(HttpStatus.BAD_REQUEST, "Formato de datos inválido (revise fechas AAAA-MM-DD y números)", null);
     }

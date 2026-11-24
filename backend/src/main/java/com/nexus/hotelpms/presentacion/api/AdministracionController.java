@@ -5,6 +5,7 @@ import com.nexus.hotelpms.dominio.modelo.CategoriaConsumo;
 import com.nexus.hotelpms.dominio.modelo.CatalogoItem;
 import com.nexus.hotelpms.dominio.modelo.EstadoHabitacion;
 import com.nexus.hotelpms.dominio.modelo.Habitacion;
+import com.nexus.hotelpms.dominio.modelo.Reserva;
 import com.nexus.hotelpms.dominio.modelo.Sede;
 import com.nexus.hotelpms.dominio.modelo.Usuario;
 import jakarta.validation.Valid;
@@ -13,19 +14,19 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Fase 2 (HU-13..HU-17). Todo el controlador es exclusivo del Administrador:
- * un recepcionista recibe 403 (HU-06 / HU-14).
+ * un recepcionista recibe 403 (HU-06 / HU-14). Los textos de validación salen de las historias de usuario.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -41,8 +42,14 @@ public class AdministracionController {
     }
 
     // ---- HU-13: sedes ----
-    public record SedeRequest(@NotBlank String nombre, @NotBlank String direccion) { }
+    public record SedeRequest(@NotBlank(message = "El nombre de la sede es obligatorio") String nombre,
+                              @NotBlank(message = "La dirección de la sede es obligatoria") String direccion) { }
     public record ActivaRequest(boolean activa) { }
+
+    @GetMapping("/sedes")
+    public List<Sede> listarSedes() {
+        return admin.listarTodasLasSedes();
+    }
 
     @PostMapping("/sedes")
     public ResponseEntity<Sede> crearSede(@Valid @RequestBody SedeRequest r) {
@@ -59,14 +66,38 @@ public class AdministracionController {
         return admin.cambiarActivaSede(id, r.activa());
     }
 
+    /** HU-13: vista de reservas de una sede (el administrador elige la sede en cada consulta). */
+    @GetMapping("/reservas")
+    public List<Reserva> reservasDeSede(@RequestParam(required = false) String sedeId) {
+        return admin.listarReservas(sedeId);
+    }
+
     // ---- HU-14: usuarios y roles ----
-    public record RecepcionistaRequest(@NotBlank String nombre, @NotBlank @Email String email,
-                                       @NotBlank String password, @NotBlank String sedeId) { }
-    public record SedeAsignadaRequest(@NotBlank String sedeId) { }
+    public record RecepcionistaRequest(
+            @NotBlank(message = "El nombre es obligatorio") String nombre,
+            @NotBlank(message = "El correo es obligatorio") @Email(message = "El correo no es válido") String email,
+            @NotBlank(message = "La contraseña es obligatoria") String password,
+            @NotBlank(message = "Debe asignar una sede al usuario para continuar") String sedeId) { }
+    public record UsuarioUpdateRequest(
+            @NotBlank(message = "El nombre es obligatorio") String nombre,
+            @NotBlank(message = "El correo es obligatorio") @Email(message = "El correo no es válido") String email) { }
+    public record SedeAsignadaRequest(
+            @NotBlank(message = "Debe asignar una sede al usuario para continuar") String sedeId) { }
+
+    /** Con {@code sedeId} solo devuelve los usuarios de esa sede (HU-13); sin él, todos. */
+    @GetMapping("/usuarios")
+    public List<Usuario> listarUsuarios(@RequestParam(required = false) String sedeId) {
+        return admin.listarUsuarios(sedeId);
+    }
 
     @PostMapping("/usuarios")
     public ResponseEntity<Usuario> crearRecepcionista(@Valid @RequestBody RecepcionistaRequest r) {
         return creado(admin.crearRecepcionista(r.nombre(), r.email(), r.password(), r.sedeId()));
+    }
+
+    @PutMapping("/usuarios/{id}")
+    public Usuario actualizarUsuario(@PathVariable String id, @Valid @RequestBody UsuarioUpdateRequest r) {
+        return admin.actualizarUsuario(id, r.nombre(), r.email());
     }
 
     @PutMapping("/usuarios/{id}/sede")
@@ -80,16 +111,21 @@ public class AdministracionController {
     }
 
     // ---- HU-15: inventario de habitaciones ----
-    public record HabitacionRequest(@NotBlank String sedeId, @NotBlank String numero, @NotBlank String tipo,
-                                    @NotNull @Min(1) Integer capacidadMax, @NotNull BigDecimal precioBase) { }
-    public record HabitacionUpdateRequest(@NotBlank String tipo, @NotNull @Min(1) Integer capacidadMax,
-                                          @NotNull BigDecimal precioBase) { }
-    public record EstadoHabitacionRequest(@NotNull EstadoHabitacion estado) { }
+    public record HabitacionRequest(
+            @NotBlank(message = "La sede es obligatoria") String sedeId,
+            @NotBlank(message = "El número de habitación es obligatorio") String numero,
+            @NotBlank(message = "El tipo de habitación es obligatorio") String tipo,
+            @NotNull(message = "La capacidad máxima es obligatoria") @Min(value = 1, message = "La capacidad máxima debe ser mayor a cero") Integer capacidadMax,
+            @NotNull(message = "El precio base es obligatorio") BigDecimal precioBase) { }
+    public record HabitacionUpdateRequest(
+            @NotBlank(message = "El tipo de habitación es obligatorio") String tipo,
+            @NotNull(message = "La capacidad máxima es obligatoria") @Min(value = 1, message = "La capacidad máxima debe ser mayor a cero") Integer capacidadMax,
+            @NotNull(message = "El precio base es obligatorio") BigDecimal precioBase) { }
+    public record EstadoHabitacionRequest(@NotNull(message = "El estado es obligatorio") EstadoHabitacion estado) { }
 
     @PostMapping("/habitaciones")
     public ResponseEntity<Habitacion> crearHabitacion(@Valid @RequestBody HabitacionRequest r) {
-        return creado(admin.crearHabitacion(r.sedeId(), r.numero(), r.tipo(),
-                r.capacidadMax(), r.precioBase()));
+        return creado(admin.crearHabitacion(r.sedeId(), r.numero(), r.tipo(), r.capacidadMax(), r.precioBase()));
     }
 
     @PutMapping("/habitaciones/{id}")
@@ -103,10 +139,20 @@ public class AdministracionController {
     }
 
     // ---- HU-16: catálogo de consumos ----
-    public record ItemRequest(@NotBlank String sedeId, @NotBlank String nombre, @NotNull BigDecimal precio,
-                              @NotNull CategoriaConsumo categoria) { }
-    public record ItemUpdateRequest(@NotBlank String nombre, @NotNull BigDecimal precio,
-                                    @NotNull CategoriaConsumo categoria) { }
+    public record ItemRequest(
+            @NotBlank(message = "La sede es obligatoria") String sedeId,
+            @NotBlank(message = "El nombre del ítem es obligatorio") String nombre,
+            @NotNull(message = "El precio es obligatorio") BigDecimal precio,
+            @NotNull(message = "La categoría es obligatoria") CategoriaConsumo categoria) { }
+    public record ItemUpdateRequest(
+            @NotBlank(message = "El nombre del ítem es obligatorio") String nombre,
+            @NotNull(message = "El precio es obligatorio") BigDecimal precio,
+            @NotNull(message = "La categoría es obligatoria") CategoriaConsumo categoria) { }
+
+    @GetMapping("/catalogo")
+    public List<CatalogoItem> listarCatalogo(@RequestParam(required = false) String sedeId) {
+        return admin.listarCatalogoCompleto(sedeId);
+    }
 
     @PostMapping("/catalogo")
     public ResponseEntity<CatalogoItem> crearItem(@Valid @RequestBody ItemRequest r) {
@@ -125,16 +171,18 @@ public class AdministracionController {
 
     // ---- HU-17: reportes operativos ----
     @GetMapping("/reportes/ocupacion")
-    public Map<String, Object> ocupacion(@RequestParam String sedeId,
-                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-                                         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+    public Map<String, Object> ocupacion(
+            @RequestParam(required = false) String sedeId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
         return admin.ocupacion(sedeId, fechaInicio, fechaFin);
     }
 
     @GetMapping("/reportes/ingresos")
-    public Map<String, Object> ingresos(@RequestParam String sedeId,
-                                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-                                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
+    public Map<String, Object> ingresos(
+            @RequestParam(required = false) String sedeId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin) {
         return admin.ingresos(sedeId, fechaInicio, fechaFin);
     }
 }

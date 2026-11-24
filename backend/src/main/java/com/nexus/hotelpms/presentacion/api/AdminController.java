@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/** Funciones exclusivas del Administrador (HU-06: un recepcionista recibe 403). CRUD de sedes/usuarios llega en la Fase 2. */
+/** Funciones exclusivas del Administrador (HU-06: un recepcionista recibe 403). El resto de la administración (HU-13 a HU-17) está en AdministracionController. */
 @RestController
 @RequestMapping("/api/admin")
 @PreAuthorize("hasRole('Administrador')")
@@ -15,11 +15,6 @@ public class AdminController {
     private final AuthService auth;
 
     public AdminController(AuthService auth) { this.auth = auth; }
-
-    @GetMapping("/usuarios")
-    public java.util.List<com.nexus.hotelpms.dominio.modelo.Usuario> usuarios() {
-        return auth.listarUsuarios();
-    }
 
     @PostMapping("/usuarios/{id}/desbloquear")
     public ResponseEntity<Map<String, String>> desbloquear(@PathVariable String id) {

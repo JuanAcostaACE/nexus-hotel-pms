@@ -2,6 +2,7 @@ package com.nexus.hotelpms.aplicacion.servicios;
 
 import com.nexus.hotelpms.aplicacion.puertos.*;
 import com.nexus.hotelpms.aplicacion.sesion.AuthPrincipal;
+import com.nexus.hotelpms.dominio.excepcion.AccesoDenegadoException;
 import com.nexus.hotelpms.dominio.excepcion.RecursoNoEncontradoException;
 import com.nexus.hotelpms.dominio.excepcion.ReglaNegocioException;
 import com.nexus.hotelpms.dominio.modelo.*;
@@ -44,25 +45,39 @@ public class OperacionService {
 
     // ------------------------------------------------------------ lecturas de apoyo
     public List<Habitacion> listarHabitaciones(AuthPrincipal p, String sedeIdParam, EstadoHabitacion estado) {
-        String sede = p.esAdministrador() ? sedeIdParam : p.sedeId();
-        if (sede == null || sede.isBlank()) {
-            throw new ReglaNegocioException("Debe indicar la sede (sedeId)");
-        }
+        String sede = sedeDeConsulta(p, sedeIdParam);
         return estado == null ? habitaciones.buscarPorSede(sede) : habitaciones.buscarPorSedeYEstado(sede, estado);
     }
 
     /** Solo ítems activos de la sede (HU-09: los inactivos no se ofrecen). */
     public List<CatalogoItem> listarCatalogo(AuthPrincipal p, String sedeIdParam) {
-        String sede = p.esAdministrador() ? sedeIdParam : p.sedeId();
-        if (sede == null || sede.isBlank()) {
-            throw new ReglaNegocioException("Debe indicar la sede (sedeId)");
+        return catalogo.findBySedeIdAndActivoTrue(sedeDeConsulta(p, sedeIdParam));
+    }
+
+    /**
+     * Aislamiento multi-sede (HU-13/HU-14): el administrador indica la sede; el recepcionista solo opera la suya
+     * y si pide otra se le deniega con el mensaje de la HU.
+     */
+    private String sedeDeConsulta(AuthPrincipal p, String sedeIdParam) {
+        if (p.esAdministrador()) {
+            if (sedeIdParam == null || sedeIdParam.isBlank()) {
+                throw new ReglaNegocioException("Debe seleccionar una sede para continuar");
+            }
+            return sedeIdParam;
         }
-        return catalogo.findBySedeIdAndActivoTrue(sede);
+        if (sedeIdParam != null && !sedeIdParam.isBlank() && !sedeIdParam.equals(p.sedeId())) {
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los datos de esta sede");
+        }
+        return p.sedeId();
     }
 
     private Habitacion habitacion(String id, AuthPrincipal p) {
-        return habitaciones.buscarPorId(id).filter(h -> p.puedeAccederASede(h.getSedeId()))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Habitación no encontrada en esta sede"));
+        Habitacion h = habitaciones.buscarPorId(id)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Habitación no encontrada"));
+        if (!p.puedeAccederASede(h.getSedeId())) {
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los datos de esta sede");
+        }
+        return h;
     }
 
     private Reserva reservaEnCurso(Habitacion h) {
@@ -92,8 +107,11 @@ public class OperacionService {
     }
 
     public Consumo anularConsumo(String consumoId, String motivo, AuthPrincipal p) {
-        Consumo c = consumos.findById(consumoId).filter(x -> p.puedeAccederASede(x.getSedeId()))
-                .orElseThrow(() -> new RecursoNoEncontradoException("Consumo no encontrado en esta sede"));
+        Consumo c = consumos.findById(consumoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Consumo no encontrado"));
+        if (!p.puedeAccederASede(c.getSedeId())) {
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los datos de esta sede");
+        }
         Reserva r = reservas.buscarPorId(c.getReservaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva no encontrada"));
         r.asegurarModificable();

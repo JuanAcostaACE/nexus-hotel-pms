@@ -5,6 +5,7 @@ import com.nexus.hotelpms.aplicacion.reembolso.PoliticaReembolso;
 import com.nexus.hotelpms.aplicacion.reembolso.ResultadoReembolso;
 import com.nexus.hotelpms.aplicacion.reembolso.SelectorPoliticaReembolso;
 import com.nexus.hotelpms.aplicacion.sesion.AuthPrincipal;
+import com.nexus.hotelpms.dominio.excepcion.AccesoDenegadoException;
 import com.nexus.hotelpms.dominio.excepcion.ConflictoException;
 import com.nexus.hotelpms.dominio.excepcion.ReglaNegocioException;
 import com.nexus.hotelpms.dominio.excepcion.RecursoNoEncontradoException;
@@ -161,7 +162,7 @@ public class ReservaService {
     public Reserva obtenerParaPersonal(String idOCodigo, AuthPrincipal p) {
         Reserva r = obtener(idOCodigo);
         if (!p.puedeAccederASede(r.getSedeId())) {
-            throw new RecursoNoEncontradoException("Reserva no encontrada en esta sede");
+            throw new AccesoDenegadoException("No tiene permisos para acceder a los datos de esta sede");
         }
         return r;
     }
