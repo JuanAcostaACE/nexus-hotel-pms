@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: nexus-hotel-pms
+  data:
+    mongodb:
+      # La cadena de conexión NUNCA va en el código: se lee de la variable de entorno MONGODB_URI.
+      uri: ${MONGODB_URI}
+      database: ${MONGODB_DATABASE:nexus_hotel_pms}
+      auto-index-creation: true
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:8080}
+
+hotel:
+  bloqueo-minutos: 15              # HU-02: temporizador de pago
+  hora-limite-checkout: 13         # HU-10
+  recargo-late-checkout: 50000     # HU-10 (COP, configurable)
+  iva-tasa: 0.19                   # HU-12
+  impuesto-consumo-tasa: 0.08      # HU-12
+  zona: America/Bogota
+  sesion-minutos: 15               # HU-06: inactividad
+  pse-secret: ${PSE_WEBHOOK_SECRET:nexus-pse-secreto}
+  jwt-secret: ${JWT_SECRET:cambia-este-secreto-jwt-de-al-menos-32-caracteres}
+  seed-habilitado: true
+  job-liberacion-ms: 30000
+
+logging:
+  level:
+    com.nexus.hotelpms: INFO

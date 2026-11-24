@@ -1,0 +1,1557 @@
+{
+  "info": {
+    "_postman_id": "8c5f2a9a-afb2-4672-bc86-dc2511947edd",
+    "name": "Nexus Hotel PMS · Colección sencilla (HU 01-17)",
+    "description": "Colección reducida: un folder por historia de usuario (o grupo). Ejecutar en orden: folder 00 primero.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "tokenRecep",
+      "value": ""
+    },
+    {
+      "key": "tokenSur",
+      "value": ""
+    },
+    {
+      "key": "tokenAdmin",
+      "value": ""
+    },
+    {
+      "key": "sedeNorteId",
+      "value": ""
+    },
+    {
+      "key": "rsvId",
+      "value": ""
+    },
+    {
+      "key": "rsvCancel",
+      "value": ""
+    },
+    {
+      "key": "consumoId",
+      "value": ""
+    },
+    {
+      "key": "catalogoAguaId",
+      "value": ""
+    },
+    {
+      "key": "hab101",
+      "value": ""
+    },
+    {
+      "key": "hab205",
+      "value": ""
+    },
+    {
+      "key": "hoy",
+      "value": ""
+    },
+    {
+      "key": "en3dias",
+      "value": ""
+    },
+    {
+      "key": "en5dias",
+      "value": ""
+    }
+  ],
+  "event": [],
+  "item": [
+    {
+      "name": "00 · Acceso (HU-06 · HU-13)",
+      "item": [
+        {
+          "name": "Login Recepcionista Norte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda el token en {{tokenRecep}}. Ejecutar antes de los demás requests de este rol.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recepcionista@hotel.com\",\n  \"password\": \"Recep123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenRecep', pm.response.json().token);",
+                  "pm.collectionVariables.set('sedeNorteId', pm.response.json().sedeId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Recepcionista Sur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda el token en {{tokenSur}}. Ejecutar antes de los demás requests de este rol.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recepcion.sur@hotel.com\",\n  \"password\": \"Recep123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenSur', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Guarda el token en {{tokenAdmin}}. Ejecutar antes de los demás requests de este rol.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@hotel.com\",\n  \"password\": \"Admin123*\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenAdmin', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin token → 401 (HU-06)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones"
+              ]
+            },
+            "description": "Debe responder 401 sin cabecera Authorization."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-01 · Disponibilidad (público) · Diagrama: contexto + componentes",
+      "item": [
+        {
+          "name": "Listar sedes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sedes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sedes"
+              ]
+            },
+            "description": "Obtiene sedeNorteId y sedeSurId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Disponibilidad Sede Norte (2 huéspedes)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sedes/{{sedeNorteId}}/disponibilidad?fechaEntrada={{en3dias}}&fechaSalida={{en5dias}}&huespedes=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sedes",
+                "{{sedeNorteId}}",
+                "disponibilidad"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{en3dias}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{en5dias}}"
+                },
+                {
+                  "key": "huespedes",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};\npm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar habitaciones Norte (guarda hab101 y hab205)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const h=pm.response.json()||[];",
+                  "const a=h.find(x=>x.numero==='101'); if(a) pm.collectionVariables.set('hab101', a.id);",
+                  "const b=h.find(x=>x.numero==='205'); if(b) pm.collectionVariables.set('hab205', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Salida anterior a la entrada → 422",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sedes/{{sedeNorteId}}/disponibilidad?fechaEntrada={{en5dias}}&fechaSalida={{en3dias}}&huespedes=2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "sedes",
+                "{{sedeNorteId}}",
+                "disponibilidad"
+              ],
+              "query": [
+                {
+                  "key": "fechaEntrada",
+                  "value": "{{en5dias}}"
+                },
+                {
+                  "key": "fechaSalida",
+                  "value": "{{en3dias}}"
+                },
+                {
+                  "key": "huespedes",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};\npm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-02 · HU-03 · Reserva y pago PSE · Diagrama: clases + capas",
+      "item": [
+        {
+          "name": "Crear reserva (hab 205, bloquea 15 min)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"habitacionId\": \"{{hab205}}\",\n  \"fechaEntrada\": \"{{hoy}}\",\n  \"fechaSalida\": \"{{en3dias}}\",\n  \"numHuespedes\": 2,\n  \"clienteNombre\": \"Ana Pérez\",\n  \"clienteDocumento\": \"1098765432\",\n  \"clienteEmail\": \"ana@correo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('rsvId', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};\npm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));\nconst x=new Date();pm.collectionVariables.set('hoy',x.toISOString().slice(0,10));"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Misma habitación por otro cliente → 409 (concurrencia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"habitacionId\": \"{{hab205}}\",\n  \"fechaEntrada\": \"{{hoy}}\",\n  \"fechaSalida\": \"{{en3dias}}\",\n  \"numHuespedes\": 2,\n  \"clienteNombre\": \"Otro Cliente\",\n  \"clienteDocumento\": \"555\",\n  \"clienteEmail\": \"otro@correo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};\npm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));\nconst x=new Date();pm.collectionVariables.set('hoy',x.toISOString().slice(0,10));"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar con PSE (APROBADO)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "pago"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Webhook PSE sin secreto → 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/pse",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "pse"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaccionId\": \"TRX-FALSA\",\n  \"resultado\": \"APROBADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-04 · Cancelación y reembolso (Strategy) · Diagrama: clases",
+      "item": [
+        {
+          "name": "Reserva nueva y pagada (para cancelar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sedeId\": \"{{sedeNorteId}}\",\n  \"habitacionId\": \"{{hab101}}\",\n  \"fechaEntrada\": \"{{en3dias}}\",\n  \"fechaSalida\": \"{{en5dias}}\",\n  \"numHuespedes\": 1,\n  \"clienteNombre\": \"Luis Ruiz\",\n  \"clienteDocumento\": \"77\",\n  \"clienteEmail\": \"luis@correo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('rsvCancel', pm.response.json().id);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": "const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};\npm.collectionVariables.set('en3dias',d(3));pm.collectionVariables.set('en5dias',d(5));"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pagar la reserva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvCancel}}/pago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvCancel}}",
+                "pago"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"banco\": \"1007\",\n  \"simulacion\": \"APROBADO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar con >48 h → reembolso total",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvCancel}}/cancelar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvCancel}}",
+                "cancelar"
+              ]
+            },
+            "description": "La estrategia elegida debe ser ReembolsoTotal."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-05 · HU-07 · Comprobante y búsqueda en mostrador · Diagrama: componentes",
+      "item": [
+        {
+          "name": "Comprobante PDF con QR (pago aprobado)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/comprobante",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "comprobante"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar por cédula",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/buscar?cedula=1098765432",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "buscar"
+              ],
+              "query": [
+                {
+                  "key": "cedula",
+                  "value": "1098765432"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recepción Sur no ve reservas de Norte (aislamiento)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenSur}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/buscar?cedula=1098765432",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "buscar"
+              ],
+              "query": [
+                {
+                  "key": "cedula",
+                  "value": "1098765432"
+                }
+              ]
+            },
+            "description": "Debe devolver lista vacía (HU-13)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-08 · Check-in y no-show · Diagrama: vista lógica (estados)",
+      "item": [
+        {
+          "name": "No-show antes de las 23:59 → rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/no-show",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "no-show"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/checkin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "checkin"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-09 · Consumos · Diagrama: clases (Consumo, CatalogoItem)",
+      "item": [
+        {
+          "name": "Catálogo activo (guarda catalogoAguaId)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/catalogo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "catalogo"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const it=(pm.response.json()||[]).find(i=>i.nombre.startsWith('Agua mineral'));",
+                  "if(it) pm.collectionVariables.set('catalogoAguaId', it.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar consumo (Agua x2) en hab 205",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab205}}/consumos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab205}}",
+                "consumos"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogoItemId\": \"{{catalogoAguaId}}\",\n  \"cantidad\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('consumoId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consumo en habitación no ocupada → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab101}}/consumos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab101}}",
+                "consumos"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"catalogoItemId\": \"{{catalogoAguaId}}\",\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anular consumo con motivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/consumos/{{consumoId}}/anular",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "consumos",
+                "{{consumoId}}",
+                "anular"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Error de digitación\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cuenta de la habitación",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab205}}/consumos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab205}}",
+                "consumos"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-10 · HU-11 · Check-out y limpieza · Diagrama: vista lógica (estados)",
+      "item": [
+        {
+          "name": "Resumen de check-out (sin confirmar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab205}}/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab205}}",
+                "checkout"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar check-out → EnLimpieza + factura",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab205}}/checkout?confirmar=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab205}}",
+                "checkout"
+              ],
+              "query": [
+                {
+                  "key": "confirmar",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Habilitar habitación tras limpieza",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones/{{hab205}}/habilitar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones",
+                "{{hab205}}",
+                "habilitar"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-12 · Factura final · Diagrama: componentes (PDF)",
+      "item": [
+        {
+          "name": "Factura en JSON (IVA 19 % + impuesto 8 %)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/factura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "factura"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Factura PDF",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservas/{{rsvId}}/factura/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "reservas",
+                "{{rsvId}}",
+                "factura",
+                "pdf"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consumo en reserva cerrada → rechazado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/consumos/{{consumoId}}/anular",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "consumos",
+                "{{consumoId}}",
+                "anular"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Prueba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-13 · HU-14 · Administración (solo Administrador) · Diagrama: despliegue + clases",
+      "item": [
+        {
+          "name": "Listar usuarios (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recepcionista intenta función de admin → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenRecep}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usuarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "usuarios"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HU-15 a HU-17 · Fase 2 (pendiente)",
+      "item": [
+        {
+          "name": "Pendiente: inventario de habitaciones (HU-15)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/habitaciones?sedeId={{sedeNorteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "habitaciones"
+              ],
+              "query": [
+                {
+                  "key": "sedeId",
+                  "value": "{{sedeNorteId}}"
+                }
+              ]
+            },
+            "description": "Se completará en Fase 2."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
