@@ -131,54 +131,6 @@ function Elegir-Sede {
 }
 
 # ---------------------------------------------------------------- funciones
-function Ver-Sedes {
-    Cabecera
-    Mostrar-Tabla ((Api "GET" "/api/sedes").Json) @("nombre", "direccion", "activa")
-    Pausa
-}
-
-function Disponibilidad {
-    Cabecera
-    $sede = Elegir-Sede
-    $en = Pedir "Fecha de entrada (AAAA-MM-DD)" ((Get-Date).AddDays(3).ToString("yyyy-MM-dd"))
-    $sa = Pedir "Fecha de salida (AAAA-MM-DD)" ((Get-Date).AddDays(5).ToString("yyyy-MM-dd"))
-    $hu = Pedir "Número de huéspedes" "2"
-    $r = Api "GET" "/api/sedes/$sede/disponibilidad?fechaEntrada=$en&fechaSalida=$sa&huespedes=$hu"
-    if ($r.Status -eq 200) {
-        Ok "$($r.Json.habitaciones.Count) habitaciones disponibles"
-        Mostrar-Tabla $r.Json.habitaciones @("numero", "tipo", "capacidadMax", "precioBase")
-    } else { MostrarError $r }
-    Pausa
-}
-
-function Crear-Reserva {
-    Cabecera
-    $sede = Elegir-Sede
-    $en = Pedir "Fecha de entrada (AAAA-MM-DD)" (Get-Date).ToString("yyyy-MM-dd")
-    $sa = Pedir "Fecha de salida (AAAA-MM-DD)" (Get-Date).AddDays(2).ToString("yyyy-MM-dd")
-    $hu = Pedir "Número de huéspedes" "2"
-    # Solo habitaciones libres en esas fechas y con capacidad suficiente.
-    $disp = Api "GET" "/api/sedes/$sede/disponibilidad?fechaEntrada=$en&fechaSalida=$sa&huespedes=$hu"
-    if ($disp.Status -ne 200) { MostrarError $disp; Pausa; return }
-    $hab = @($disp.Json.habitaciones)
-    if ($hab.Count -eq 0) { Mal "No hay habitaciones disponibles para $hu huésped(es) en esas fechas"; Pausa; return }
-    Mostrar-Tabla $hab @("numero", "tipo", "capacidadMax", "precioBase")
-    $num = Pedir "Número de habitación" $hab[0].numero
-    $habitacion = $hab | Where-Object { $_.numero -eq $num } | Select-Object -First 1
-    if (-not $habitacion) { Mal "Esa habitación no está en la lista"; Pausa; return }
-    $nombre = Pedir "Nombre del huésped" "Cliente Demo"
-    $doc = Pedir "Documento" "1000$(Get-Random -Maximum 99999)"
-    $mail = Pedir "Correo" "cliente@correo.com"
-    $r = Api "POST" "/api/reservas" @{
-        sedeId = $sede; habitacionId = $habitacion.id; fechaEntrada = $en; fechaSalida = $sa
-        numHuespedes = [int]$hu; clienteNombre = $nombre; clienteDocumento = $doc; clienteEmail = $mail }
-    if ($r.Status -eq 201) {
-        Ok "Reserva creada: código $($r.Json.codigo)  ·  estado $($r.Json.estado)  ·  total $($r.Json.valorTotal)"
-        Info "Queda bloqueada 15 minutos hasta el pago."
-    } else { MostrarError $r }
-    Pausa
-}
-
 function Buscar-Reservas {
     Cabecera
     Write-Host "    1  Por cédula"
@@ -665,35 +617,6 @@ function Admin-Reporte {
 }
 
 # ---------------------------------------------------------------- menú principal del administrador
-function Menu-Admin {
-    while ($script:token) {
-        Cabecera
-        Write-Host "  ADMINISTRACIÓN (todas las sedes)" -ForegroundColor Yellow
-        Write-Host "    1  Sedes (HU-13)"
-        Write-Host "    2  Usuarios y roles (HU-14)"
-        Write-Host "    3  Inventario de habitaciones (HU-15)"
-        Write-Host "    4  Catálogo de consumos (HU-16)"
-        Write-Host "    5  Reportes de ocupación e ingresos (HU-17)"
-        Write-Host "    6  Consultar disponibilidad (HU-01)"
-        Write-Host "    7  Buscar reserva (HU-07)"
-        Write-Host "    8  Habitaciones en limpieza (HU-11)"
-        Write-Host ""
-        Write-Host "    0  Cerrar sesión"
-        switch (Pedir "Opción") {
-            "1" { Menu-Admin-Sedes }
-            "2" { Menu-Admin-Usuarios }
-            "3" { Menu-Admin-Habitaciones }
-            "4" { Menu-Admin-Catalogo }
-            "5" { Admin-Reporte }
-            "6" { Disponibilidad }
-            "7" { Buscar-Reservas }
-            "8" { Habitaciones-Limpieza }
-            "0" { Cerrar-Sesion; return }
-            default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
-        }
-    }
-}
-
 # ---------------------------------------------------------------- menús
 function Gestionar-Sedes {
     Cabecera
@@ -762,41 +685,132 @@ function Desbloquear-Usuario {
     Pausa
 }
 
+
+# ---------------------------------------------------------------- CLIENTE (HU-01 a HU-05, sin login)
+function Cli-Elegir-Sede {
+    $sedes = @((Api "GET" "/api/sedes").Json)
+    return (Seleccionar $sedes { param($x) "$($x.nombre)  ·  $($x.direccion)" } "Sede")
+}
+
+function Cli-Disponibilidad {
+    Cabecera
+    $sede = Cli-Elegir-Sede
+    if (-not $sede) { return }
+    $en = Pedir "Fecha de entrada (AAAA-MM-DD)" (Get-Date).AddDays(3).ToString("yyyy-MM-dd")
+    $sa = Pedir "Fecha de salida (AAAA-MM-DD)" (Get-Date).AddDays(5).ToString("yyyy-MM-dd")
+    $hu = Pedir "Número de huéspedes" "2"
+    $r = Api "GET" "/api/sedes/$($sede.id)/disponibilidad?fechaEntrada=$en&fechaSalida=$sa&huespedes=$hu"
+    if ($r.Status -eq 200) {
+        if ($r.Json.habitaciones.Count -eq 0) { Info "No hay habitaciones disponibles para los criterios seleccionados" }
+        else {
+            Ok "$($r.Json.habitaciones.Count) habitación(es) disponible(s) en $($sede.nombre)"
+            Mostrar-Tabla $r.Json.habitaciones @("numero", "tipo", "capacidadMax", "precioBase")
+        }
+    } else { MostrarError $r }
+    Pausa
+}
+
+function Cli-Reservar {
+    Cabecera
+    $sede = Cli-Elegir-Sede
+    if (-not $sede) { return }
+    $en = Pedir "Fecha de entrada (AAAA-MM-DD)" (Get-Date).AddDays(3).ToString("yyyy-MM-dd")
+    $sa = Pedir "Fecha de salida (AAAA-MM-DD)" (Get-Date).AddDays(5).ToString("yyyy-MM-dd")
+    $hu = Pedir "Número de huéspedes" "2"
+    $disp = Api "GET" "/api/sedes/$($sede.id)/disponibilidad?fechaEntrada=$en&fechaSalida=$sa&huespedes=$hu"
+    if ($disp.Status -ne 200) { MostrarError $disp; Pausa; return }
+    $hab = @($disp.Json.habitaciones)
+    if ($hab.Count -eq 0) { Info "No hay habitaciones disponibles para los criterios seleccionados"; Pausa; return }
+    Mostrar-Tabla $hab @("numero", "tipo", "capacidadMax", "precioBase")
+    $num = Pedir "Número de la habitación que quieres" $hab[0].numero
+    $h = $hab | Where-Object { $_.numero -eq $num } | Select-Object -First 1
+    if (-not $h) { Mal "Esa habitación no está en la lista"; Pausa; return }
+    Write-Host ""
+    Info "Datos del huésped principal (todos son obligatorios):"
+    $nombre = Pedir "Nombre completo"
+    $doc = Pedir "Documento de identidad"
+    $mail = Pedir "Correo electrónico"
+    if (-not $nombre -or -not $doc -or -not $mail) { Mal "Faltan campos obligatorios: no se genera ninguna reserva"; Pausa; return }
+    $r = Api "POST" "/api/reservas" @{
+        sedeId = $sede.id; habitacionId = $h.id; fechaEntrada = $en; fechaSalida = $sa; numHuespedes = [int]$hu
+        clienteNombre = $nombre; clienteDocumento = $doc; clienteEmail = $mail }
+    if ($r.Status -eq 201) {
+        Ok "Reserva creada: código $($r.Json.codigo)  ·  total $($r.Json.valorTotal)"
+        Info "La habitación queda bloqueada 15 minutos. Guarda el código para pagar (opción 3)."
+    } else { MostrarError $r }
+    Pausa
+}
+
+function Menu-Cliente {
+    while ($true) {
+        Cabecera
+        Write-Host "  CLIENTE" -ForegroundColor Yellow
+        Write-Host "    1  Consultar disponibilidad (HU-01)"
+        Write-Host "    2  Reservar habitación (HU-02)"
+        Write-Host "    3  Pagar la reserva con PSE (HU-03)"
+        Write-Host "    4  Cancelar la reserva (HU-04)"
+        Write-Host "    5  Descargar el comprobante PDF (HU-05)"
+        Write-Host ""
+        Write-Host "    0  Volver"
+        switch (Pedir "Opción") {
+            "1" { Cli-Disponibilidad }
+            "2" { Cli-Reservar }
+            "3" { Accion-Reserva "pagar" }
+            "4" { Accion-Reserva "cancelar" }
+            "5" { Accion-Reserva "comprobante" }
+            "0" { return }
+            default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
+        }
+    }
+}
+
+# ---------------------------------------------------------------- RECEPCIÓN (HU-06 a HU-12)
 function Menu-Recepcion {
     while ($script:token) {
         Cabecera
-        Write-Host "  RECEPCIÓN" -ForegroundColor Yellow
-        Write-Host "    1  Ver sedes"
-        Write-Host "    2  Consultar disponibilidad"
-        Write-Host "    3  Crear reserva"
-        Write-Host "    4  Buscar reserva (cédula o código)"
-        Write-Host "    5  Pagar reserva (PSE simulado)"
-        Write-Host "    6  Descargar comprobante PDF"
-        Write-Host "    7  Check-in"
-        Write-Host "    8  Marcar No-Show"
-        Write-Host "    9  Registrar consumo"
-        Write-Host "   10  Check-out"
-        Write-Host "   11  Habitaciones en limpieza"
-        Write-Host "   12  Ver factura"
-        Write-Host "   13  Cancelar reserva"
+        Write-Host "  RECEPCIÓN · $script:nombre" -ForegroundColor Yellow
+        Write-Host "    1  Buscar reserva por cédula o código (HU-07)"
+        Write-Host "    2  Check-in (HU-08)"
+        Write-Host "    3  Marcar No-Show (HU-08)"
+        Write-Host "    4  Registrar consumo (HU-09)"
+        Write-Host "    5  Check-out (HU-10)"
+        Write-Host "    6  Habitaciones en limpieza y habilitación (HU-11)"
+        Write-Host "    7  Ver factura de la reserva (HU-12)"
         Write-Host ""
         Write-Host "    0  Cerrar sesión"
-        $op = Pedir "Opción"
-        switch ($op) {
-            "1"  { Ver-Sedes }
-            "2"  { Disponibilidad }
-            "3"  { Crear-Reserva }
-            "4"  { Buscar-Reservas }
-            "5"  { Accion-Reserva "pagar" }
-            "6"  { Accion-Reserva "comprobante" }
-            "7"  { Accion-Reserva "checkin" }
-            "8"  { Accion-Reserva "noshow" }
-            "9"  { Consumo }
-            "10" { Check-out }
-            "11" { Habitaciones-Limpieza }
-            "12" { Accion-Reserva "factura" }
-            "13" { Accion-Reserva "cancelar" }
-            "0"  { Cerrar-Sesion; return }
+        switch (Pedir "Opción") {
+            "1" { Buscar-Reservas }
+            "2" { Accion-Reserva "checkin" }
+            "3" { Accion-Reserva "noshow" }
+            "4" { Consumo }
+            "5" { Check-out }
+            "6" { Habitaciones-Limpieza }
+            "7" { Accion-Reserva "factura" }
+            "0" { Cerrar-Sesion; return }
+            default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
+        }
+    }
+}
+
+# ---------------------------------------------------------------- ADMINISTRADOR (HU-13 a HU-17)
+function Menu-Admin {
+    while ($script:token) {
+        Cabecera
+        Write-Host "  ADMINISTRACIÓN (todas las sedes)" -ForegroundColor Yellow
+        Write-Host "    1  Sedes (HU-13)"
+        Write-Host "    2  Usuarios y roles (HU-14)"
+        Write-Host "    3  Inventario de habitaciones (HU-15)"
+        Write-Host "    4  Catálogo de consumos (HU-16)"
+        Write-Host "    5  Reportes de ocupación e ingresos (HU-17)"
+        Write-Host ""
+        Write-Host "    0  Cerrar sesión"
+        switch (Pedir "Opción") {
+            "1" { Menu-Admin-Sedes }
+            "2" { Menu-Admin-Usuarios }
+            "3" { Menu-Admin-Habitaciones }
+            "4" { Menu-Admin-Catalogo }
+            "5" { Admin-Reporte }
+            "0" { Cerrar-Sesion; return }
             default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
         }
     }
@@ -808,13 +822,20 @@ try { $null = Api "GET" "/api/sedes" } catch {
 }
 
 while ($true) {
-    if (-not $script:token) {
-        if (-not (Iniciar-Sesion)) {
-            if ((Pedir "¿Salir del programa? (s/n)" "s") -eq "s") { break }
-            continue
-        }
+    if ($script:token) {
+        if (Es-Admin) { Menu-Admin } else { Menu-Recepcion }
+        continue
     }
-    if (Es-Admin) { Menu-Admin } else { Menu-Recepcion }
+    Cabecera
+    Write-Host "  BIENVENIDO" -ForegroundColor Yellow
+    Write-Host "    1  Soy cliente (consultar, reservar, pagar y cancelar)"
+    Write-Host "    2  Soy personal del hotel (iniciar sesión)"
+    Write-Host ""
+    Write-Host "    0  Salir"
+    switch (Pedir "Opción" "1") {
+        "1" { Menu-Cliente }
+        "2" { $null = Iniciar-Sesion }
+        "0" { Cabecera; Write-Host "  Hasta luego." -ForegroundColor Cyan; exit 0 }
+        default { Mal "Opción no válida"; Start-Sleep -Milliseconds 700 }
+    }
 }
-Cabecera
-Write-Host "  Hasta luego." -ForegroundColor Cyan
