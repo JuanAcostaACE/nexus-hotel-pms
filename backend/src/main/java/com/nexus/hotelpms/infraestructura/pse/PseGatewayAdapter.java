@@ -7,11 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
-/**
- * <b>Patrón ADAPTER.</b> Adapta la API de PSE ({@link PseClienteSimulado}: centavos, OK/FAILED/PENDING) a la
- * interfaz que espera la aplicación ({@link IPagoGateway}: {@link BigDecimal} y {@link EstadoPago}). Así el dominio
- * no conoce los detalles del proveedor.
- */
+/** Patrón Adapter */
 @Component
 public class PseGatewayAdapter implements IPagoGateway {
     private final PseClienteSimulado cliente = new PseClienteSimulado();

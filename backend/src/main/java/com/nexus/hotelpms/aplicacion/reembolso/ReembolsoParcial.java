@@ -5,13 +5,7 @@ import com.nexus.hotelpms.dominio.modelo.Reserva;
 
 import java.math.BigDecimal;
 
-/**
- * <b>Patrón Strategy – Concrete Strategy #2.</b> Cancelación con menos de 48 horas: se retiene una noche
- * (precio base de la habitación, sin consumos) y se devuelve el resto. La reserva queda
- * {@code CanceladaConPenalidad}.
- *
- * @see PoliticaReembolso
- */
+/** Patrón Strategy */
 public class ReembolsoParcial implements PoliticaReembolso {
 
     @Override

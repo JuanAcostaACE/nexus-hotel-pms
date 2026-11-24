@@ -4,10 +4,7 @@ import com.nexus.hotelpms.dominio.modelo.Reserva;
 
 import java.time.ZonedDateTime;
 
-/**
- * <b>Patrón Strategy – selección de la estrategia.</b> Decide qué {@link PoliticaReembolso} aplicar según las horas
- * que faltan para el check-in (se toma 00:00 de la fecha de entrada). Sin estado: es seguro como singleton.
- */
+/** Patrón Strategy */
 public class SelectorPoliticaReembolso {
     public static final long UMBRAL_HORAS = 48;
 

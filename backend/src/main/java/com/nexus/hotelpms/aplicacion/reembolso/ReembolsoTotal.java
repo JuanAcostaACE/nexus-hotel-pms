@@ -5,12 +5,7 @@ import com.nexus.hotelpms.dominio.modelo.Reserva;
 
 import java.math.BigDecimal;
 
-/**
- * <b>Patrón Strategy – Concrete Strategy #1.</b> Cancelación con 48 horas o más de anticipación (el límite exacto de
- * 48 h también cae aquí): devuelve el 100 % de lo pagado y la reserva queda {@code Cancelada}.
- *
- * @see PoliticaReembolso
- */
+/** Patrón Strategy */
 public class ReembolsoTotal implements PoliticaReembolso {
 
     @Override

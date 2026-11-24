@@ -190,7 +190,7 @@ public class ReservaService {
         return new BusquedaResponse(encontradas, mensaje);
     }
 
-    // ------------------------------------------------------------------ HU-04 (Context del Strategy)
+    // Patrón Strategy (contexto)
     public CancelacionResponse cancelar(String idOCodigo) {
         Reserva r = obtener(idOCodigo);
         PoliticaReembolso politica = selectorReembolso.seleccionar(r, ahora());

@@ -2,11 +2,7 @@ package com.nexus.hotelpms.infraestructura.pse;
 
 import java.util.UUID;
 
-/**
- * "Servicio externo" que se adapta (Adaptee del patrón Adapter). Simula el SDK/API de PSE con SU propio vocabulario:
- * montos en centavos y estados {@code OK}, {@code FAILED}, {@code PENDING}. En producción se reemplaza por el
- * cliente HTTP real sin tocar el dominio ni los servicios.
- */
+/** Patrón Adapter */
 public class PseClienteSimulado {
 
     public record TransaccionPse(String trxId, String estadoPse) { }
