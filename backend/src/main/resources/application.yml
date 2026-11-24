@@ -31,6 +31,10 @@ hotel:
   seed-admin-password: ${SEED_ADMIN_PASSWORD:Admin123*}
   seed-recep-password: ${SEED_RECEP_PASSWORD:Recep123*}
   job-liberacion-ms: 30000
+  # Cola de correos (outbox): cada cuántos ms se publican los pendientes. Sin servidor SMTP el correo se escribe en el log;
+  # para envío real define SPRING_MAIL_HOST, SPRING_MAIL_PORT, SPRING_MAIL_USERNAME y SPRING_MAIL_PASSWORD.
+  job-outbox-ms: 5000
+  correo-remitente: ${CORREO_REMITENTE:no-reply@nexus-hotel.local}
 
 logging:
   level:

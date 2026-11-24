@@ -24,18 +24,20 @@ public class FacturacionService {
     private final IFacturaRepository facturas;
     private final ReservaService reservaService;
     private final IPdfGenerator pdf;
+    private final IDocumentoRepository documentos;
     private final IEmailSender email;
     private final HotelProperties props;
     private final Clock clock;
 
     public FacturacionService(IReservaRepository reservas, IConsumoRepository consumos, IFacturaRepository facturas,
-                              ReservaService reservaService, IPdfGenerator pdf, IEmailSender email,
+                              ReservaService reservaService, IPdfGenerator pdf, IDocumentoRepository documentos, IEmailSender email,
                               HotelProperties props, Clock clock) {
         this.reservas = reservas;
         this.consumos = consumos;
         this.facturas = facturas;
         this.reservaService = reservaService;
         this.pdf = pdf;
+        this.documentos = documentos;
         this.email = email;
         this.props = props;
         this.clock = clock;
@@ -67,6 +69,7 @@ public class FacturacionService {
 
         try { // la entrega del PDF no debe deshacer el cierre ya registrado
             byte[] doc = pdf.generarFactura(f, reserva, reservaService.nombreSede(reserva.getSedeId()), activos);
+            documentos.guardar(IDocumentoRepository.FACTURA, reserva.getId(), "factura-" + f.getNumeroFactura() + ".pdf", doc);
             email.enviar(reserva.getClienteEmail(), "Factura " + f.getNumeroFactura(),
                     "Gracias por su estadía. Adjuntamos su factura final.", "factura-" + f.getNumeroFactura() + ".pdf", doc);
         } catch (RuntimeException e) {
@@ -88,8 +91,13 @@ public class FacturacionService {
     public byte[] pdf(String idOCodigo, AuthPrincipal p) {
         Reserva r = reservaService.obtenerParaPersonal(idOCodigo, p);
         Factura f = consultar(idOCodigo, p);
-        List<Consumo> activos = consumos.findByReservaId(r.getId()).stream().filter(c -> !c.isAnulado()).toList();
-        return pdf.generarFactura(f, r, reservaService.nombreSede(r.getSedeId()), activos);
+        // La factura es inmutable una vez emitida: se lee el PDF guardado y, si falta, se genera y se guarda.
+        return documentos.leer(IDocumentoRepository.FACTURA, r.getId()).orElseGet(() -> {
+            List<Consumo> activos = consumos.findByReservaId(r.getId()).stream().filter(c -> !c.isAnulado()).toList();
+            byte[] doc = pdf.generarFactura(f, r, reservaService.nombreSede(r.getSedeId()), activos);
+            documentos.guardar(IDocumentoRepository.FACTURA, r.getId(), "factura-" + f.getNumeroFactura() + ".pdf", doc);
+            return doc;
+        });
     }
 
     /** Reintento manual del cierre si la generación falló y la reserva quedó PendienteDeCierre. */

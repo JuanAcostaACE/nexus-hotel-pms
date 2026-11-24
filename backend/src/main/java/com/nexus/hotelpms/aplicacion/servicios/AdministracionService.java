@@ -1,7 +1,6 @@
 package com.nexus.hotelpms.aplicacion.servicios;
 
 import com.nexus.hotelpms.aplicacion.puertos.ICatalogoItemRepository;
-import com.nexus.hotelpms.aplicacion.puertos.IConsumoRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IHabitacionRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IReservaRepository;
 import com.nexus.hotelpms.aplicacion.puertos.ISedeRepository;
@@ -15,42 +14,33 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Fase 2 (HU-13..HU-17): administración de sedes, usuarios, inventario, catálogo y reportes.
+ * Fase 2 (HU-13..HU-16): administración de sedes, usuarios, inventario y catálogo (los reportes de HU-17 están en ReporteService).
  * Todas las operaciones son exclusivas del Administrador; el control de rol vive en el controlador.
  */
 @Service
 public class AdministracionService {
-
-    /** Estados que cuentan como ocupación/ingreso confirmado. */
-    private static final Set<EstadoReserva> CONFIRMADAS = EnumSet.of(
-            EstadoReserva.Pagada, EstadoReserva.EnCurso, EstadoReserva.PendienteDeCierre, EstadoReserva.Cerrada);
 
     private final ISedeRepository sedes;
     private final IUsuarioRepository usuarios;
     private final IHabitacionRepository habitaciones;
     private final ICatalogoItemRepository catalogo;
     private final IReservaRepository reservas;
-    private final IConsumoRepository consumos;
     private final PasswordEncoder encoder;
 
     public AdministracionService(ISedeRepository sedes, IUsuarioRepository usuarios,
                                  IHabitacionRepository habitaciones, ICatalogoItemRepository catalogo,
-                                 IReservaRepository reservas, IConsumoRepository consumos, PasswordEncoder encoder) {
+                                 IReservaRepository reservas, PasswordEncoder encoder) {
         this.sedes = sedes;
         this.usuarios = usuarios;
         this.habitaciones = habitaciones;
         this.catalogo = catalogo;
         this.reservas = reservas;
-        this.consumos = consumos;
         this.encoder = encoder;
     }
 
@@ -75,6 +65,38 @@ public class AdministracionService {
         Sede s = sedes.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Sede no encontrada"));
         if (activa) s.activar(); else s.inactivar();
         return sedes.save(s);
+    }
+
+    /** HU-13: sede activa del administrador. Sin sede elegida devuelve {@code sedeId: null}. */
+    public Map<String, Object> sedeActiva(String adminId) {
+        Administrador a = buscarAdministrador(adminId);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("sedeId", a.getSedeActivaId());
+        r.put("sede", a.getSedeActivaId() == null ? null : sedes.findById(a.getSedeActivaId()).orElse(null));
+        return r;
+    }
+
+    /** HU-13: id de la sede activa, o error si el administrador aún no eligió ninguna. */
+    public String sedeActivaId(String adminId) {
+        String id = buscarAdministrador(adminId).getSedeActivaId();
+        if (id == null) {
+            throw new ReglaNegocioException("Debe seleccionar una sede para continuar");
+        }
+        return id;
+    }
+
+    /** HU-13: el administrador elige (y se recuerda) la sede sobre la que va a operar. */
+    public Map<String, Object> cambiarSedeActiva(String adminId, String sedeId) {
+        validarSede(sedeId);
+        Administrador a = buscarAdministrador(adminId);
+        a.cambiarSedeActiva(sedeId);
+        usuarios.save(a);
+        return sedeActiva(adminId);
+    }
+
+    private Administrador buscarAdministrador(String id) {
+        if (buscarUsuario(id) instanceof Administrador a) return a;
+        throw new ReglaNegocioException("Solo el administrador tiene sede activa");
     }
 
     // ---------- HU-14: usuarios y roles ----------
@@ -224,106 +246,7 @@ public class AdministracionService {
         return catalogo.save(it);
     }
 
-    // ---------- HU-17: reportes operativos ----------
-
-    /** Ocupación = noches vendidas dentro del rango / (habitaciones de la sede × noches del rango). */
-    public Map<String, Object> ocupacion(String sedeId, LocalDate inicio, LocalDate fin) {
-        validarParametrosReporte(sedeId, inicio, fin);
-        long totalHabitaciones = habitaciones.buscarPorSede(sedeId).size();
-        long nochesRango = java.time.temporal.ChronoUnit.DAYS.between(inicio, fin);
-        long nochesVendidas = reservasConfirmadas(sedeId).stream()
-                .mapToLong(r -> nochesEnRango(r, inicio, fin))
-                .sum();
-        double capacidad = (double) totalHabitaciones * nochesRango;
-        double porcentaje = capacidad == 0 ? 0 : Math.round(nochesVendidas * 1000.0 / capacidad) / 10.0;
-        Map<String, Object> r = new LinkedHashMap<>();
-        r.put("sedeId", sedeId);
-        r.put("fechaInicio", inicio);
-        r.put("fechaFin", fin);
-        r.put("nochesVendidas", nochesVendidas);
-        r.put("nochesDisponibles", (long) capacidad);
-        r.put("porcentajeOcupacion", porcentaje);
-        if (nochesVendidas == 0) {
-            r.put("mensaje", "No hay datos para el período seleccionado");
-        }
-        return r;
-    }
-
-    /**
-     * Ingresos de la sede en el rango: reservas confirmadas cuya fecha de salida cae dentro del período, más lo
-     * retenido en cancelaciones con penalidad (generaron ingreso parcial, HU-17). Se detallan estadía, recargo por
-     * salida tardía, consumos (sin los anulados) y penalidades, y el total general.
-     */
-    public Map<String, Object> ingresos(String sedeId, LocalDate inicio, LocalDate fin) {
-        validarParametrosReporte(sedeId, inicio, fin);
-        List<Reserva> enRango = reservasConfirmadas(sedeId).stream()
-                .filter(r -> salidaEnRango(r, inicio, fin))
-                .collect(Collectors.toList());
-        List<Reserva> conPenalidad = reservas.buscarPorSede(sedeId).stream()
-                .filter(r -> r.getEstado() == EstadoReserva.CanceladaConPenalidad)
-                .filter(r -> salidaEnRango(r, inicio, fin))
-                .collect(Collectors.toList());
-        BigDecimal estadia = enRango.stream().map(Reserva::getValorTotal)
-                .map(v -> v == null ? BigDecimal.ZERO : v).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal recargo = enRango.stream().map(Reserva::getRecargoLateCheckout)
-                .map(v -> v == null ? BigDecimal.ZERO : v).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal porConsumos = enRango.stream()
-                .flatMap(r -> consumos.findByReservaId(r.getId()).stream())
-                .filter(c -> !c.isAnulado())
-                .map(Consumo::getSubtotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal penalidades = conPenalidad.stream().map(Reserva::getValorRetenido)
-                .map(v -> v == null ? BigDecimal.ZERO : v).reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal total = estadia.add(recargo).add(porConsumos).add(penalidades);
-        Map<String, Object> r = new LinkedHashMap<>();
-        r.put("sedeId", sedeId);
-        r.put("fechaInicio", inicio);
-        r.put("fechaFin", fin);
-        r.put("ingresosEstadia", estadia);
-        r.put("ingresosRecargoSalidaTardia", recargo);
-        r.put("ingresosConsumos", porConsumos);
-        r.put("ingresosPenalidades", penalidades);
-        r.put("total", total);
-        r.put("ingresos", total);
-        r.put("reservasIncluidas", enRango.size());
-        r.put("cancelacionesConPenalidad", conPenalidad.size());
-        if (enRango.isEmpty() && conPenalidad.isEmpty()) {
-            r.put("mensaje", "No hay datos para el período seleccionado");
-        }
-        return r;
-    }
-
-    private static boolean salidaEnRango(Reserva r, LocalDate inicio, LocalDate fin) {
-        return !r.getFechaSalida().isBefore(inicio) && !r.getFechaSalida().isAfter(fin);
-    }
-
     // ---------- auxiliares ----------
-
-    private List<Reserva> reservasConfirmadas(String sedeId) {
-        return reservas.buscarPorSede(sedeId).stream()
-                .filter(r -> CONFIRMADAS.contains(r.getEstado()))
-                .collect(Collectors.toList());
-    }
-
-    private static long nochesEnRango(Reserva r, LocalDate inicio, LocalDate fin) {
-        LocalDate desde = r.getFechaEntrada().isAfter(inicio) ? r.getFechaEntrada() : inicio;
-        LocalDate hasta = r.getFechaSalida().isBefore(fin) ? r.getFechaSalida() : fin;
-        long n = java.time.temporal.ChronoUnit.DAYS.between(desde, hasta);
-        return Math.max(n, 0);
-    }
-
-    private void validarParametrosReporte(String sedeId, LocalDate inicio, LocalDate fin) {
-        if (sedeId == null || sedeId.isBlank()) {
-            throw new ReglaNegocioException("Debe seleccionar una sede para generar el reporte");
-        }
-        if (inicio == null || fin == null) {
-            throw new ReglaNegocioException("Debe indicar la fecha de inicio y la fecha de fin");
-        }
-        if (!inicio.isBefore(fin)) {
-            throw new ReglaNegocioException("La fecha de inicio debe ser anterior a la fecha de fin");
-        }
-        validarSede(sedeId);
-    }
 
     private void validarSede(String sedeId) {
         if (sedeId == null || sedes.findById(sedeId).isEmpty()) {

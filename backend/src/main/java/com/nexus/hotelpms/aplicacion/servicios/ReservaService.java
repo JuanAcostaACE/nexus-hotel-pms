@@ -42,17 +42,20 @@ public class ReservaService {
     private final ISedeRepository sedes;
     private final IEmailSender email;
     private final IPdfGenerator pdf;
+    private final IDocumentoRepository documentos;
     private final HotelProperties props;
     private final Clock clock;
     private final SelectorPoliticaReembolso selectorReembolso = new SelectorPoliticaReembolso();
 
     public ReservaService(IReservaRepository reservas, IHabitacionRepository habitaciones, ISedeRepository sedes,
-                          IEmailSender email, IPdfGenerator pdf, HotelProperties props, Clock clock) {
+                          IEmailSender email, IPdfGenerator pdf, IDocumentoRepository documentos,
+                          HotelProperties props, Clock clock) {
         this.reservas = reservas;
         this.habitaciones = habitaciones;
         this.sedes = sedes;
         this.email = email;
         this.pdf = pdf;
+        this.documentos = documentos;
         this.props = props;
         this.clock = clock;
     }
@@ -238,7 +241,12 @@ public class ReservaService {
         if (!CON_COMPROBANTE.contains(r.getEstado())) {
             throw new ReglaNegocioException("No hay comprobante: el pago de la reserva no ha sido aprobado");
         }
-        return pdf.generarComprobante(r, nombreSede(r.getSedeId()));
+        // Lectura del PDF ya emitido; si aún no existe se genera y se guarda (escritura).
+        return documentos.leer(IDocumentoRepository.COMPROBANTE, r.getId()).orElseGet(() -> {
+            byte[] doc = pdf.generarComprobante(r, nombreSede(r.getSedeId()));
+            documentos.guardar(IDocumentoRepository.COMPROBANTE, r.getId(), "comprobante-" + r.getCodigo() + ".pdf", doc);
+            return doc;
+        });
     }
 
     /** Genera el comprobante y lo envía por correo (se invoca al aprobarse el pago). */

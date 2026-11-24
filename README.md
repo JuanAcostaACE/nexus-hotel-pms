@@ -88,7 +88,7 @@ El resumen con dependencias entre historias está en [`00-resumen.md`](00-resume
 .
 ├── backend/                 API REST (Spring Boot + MongoDB) — ver backend/README.md
 │   ├── src/                 Código fuente por capas
-│   ├── postman/             Colección de Postman (55 requests por HU)
+│   ├── postman/             Colección de Postman (58 requests por HU)
 │   └── scripts/             Cliente de terminal y demostración
 ├── docs/
 │   ├── arquitectura/        Vistas de contexto, funcional y lógica (texto)
@@ -113,7 +113,7 @@ mvn spring-boot:run
 
 ## Pruebas
 
-- **Pruebas unitarias:** `mvn test` (36 pruebas: estados de habitación, reembolsos, reservas y seguridad).
+- **Pruebas unitarias:** `mvn test` (42 pruebas: estados de habitación, reembolsos, reservas, seguridad y alineación con los diagramas).
 - **Postman:** colección en `backend/postman/`, con una carpeta por historia de usuario.
 - **Terminal:** `backend/scripts/demo.ps1` recorre las HU de punta a punta, y `backend/scripts/nexus.ps1` ofrece menús de cliente, recepción y administración.
 

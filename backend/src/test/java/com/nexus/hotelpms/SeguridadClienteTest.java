@@ -1,5 +1,6 @@
 package com.nexus.hotelpms;
 
+import com.nexus.hotelpms.aplicacion.puertos.IDocumentoRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IEmailSender;
 import com.nexus.hotelpms.aplicacion.puertos.IHabitacionRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IPdfGenerator;
@@ -47,7 +48,7 @@ class SeguridadClienteTest {
     void preparar() {
         reservas = mock(IReservaRepository.class);
         servicio = new ReservaService(reservas, mock(IHabitacionRepository.class), mock(ISedeRepository.class),
-                mock(IEmailSender.class), mock(IPdfGenerator.class), mock(HotelProperties.class), Clock.systemDefaultZone());
+                mock(IEmailSender.class), mock(IPdfGenerator.class), mock(IDocumentoRepository.class), mock(HotelProperties.class), Clock.systemDefaultZone());
         Habitacion h = new Habitacion("sede", "101", "Doble", 2, BigDecimal.TEN);
         ReflectionTestUtils.setField(h, "id", "hab");
         Reserva r = new Reserva("RSV-20261201-001", h, "Ana", "1098765432", "a@b.com",

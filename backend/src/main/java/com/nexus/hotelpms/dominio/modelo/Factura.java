@@ -50,6 +50,9 @@ public class Factura {
     public String getReservaId() { return reservaId; }
     public String getNumeroFactura() { return numeroFactura; }
     public String getPdfUrl() { return pdfUrl; }
+
+    /** Devuelve el endpoint que entrega el PDF de la factura (el documento lo arma {@code IPdfGenerator}). */
+    public String generarPDF() { return pdfUrl; }
     public BigDecimal getSubtotalEstadia() { return subtotalEstadia; }
     public BigDecimal getSubtotalConsumos() { return subtotalConsumos; }
     public BigDecimal getRecargoLateCheckout() { return recargoLateCheckout; }

@@ -29,6 +29,8 @@ La cadena de conexión **no está en el código ni en este repositorio**: se lee
 | `JWT_SECRET` | No | valor de desarrollo | Secreto para firmar los JWT (cámbialo fuera de pruebas) |
 | `PSE_WEBHOOK_SECRET` | No | `nexus-pse-secreto` | Valor esperado en la cabecera `X-PSE-Secret` del webhook |
 | `SEED_ADMIN_PASSWORD` / `SEED_RECEP_PASSWORD` | No | `Admin123*` / `Recep123*` | Contraseñas de los usuarios de prueba que se crean con la base vacía. **Solo desarrollo**: defínelas en cualquier despliegue público |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` / `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | No | — | Servidor SMTP para enviar correos de verdad. Si no se definen, el correo solo se escribe en el log |
+| `CORREO_REMITENTE` | No | `no-reply@nexus-hotel.local` | Remitente de los correos |
 | `CORS_ORIGENES` | No | `http://localhost:*,http://127.0.0.1:*` | Orígenes del frontend web permitidos, separados por coma (admite comodines, p. ej. `https://*.vercel.app`) |
 
 ## Ejecutar
@@ -71,7 +73,7 @@ El cliente de terminal funciona contra el backend publicado: `scripts
 exus.ps1 -BaseUrl https://TU-URL`.
 
 ## Pruebas
-- **Unitarias** (dominio, patrón Strategy, reglas de administración y seguridad; no necesitan Mongo): `mvn test` (36 pruebas)
+- **Unitarias** (dominio, patrón Strategy, reglas de administración y seguridad; no necesitan Mongo): `mvn test` (42 pruebas)
 - **Demostración en terminal** (recorre HU-01 a HU-17 con pausas, colores y verificación de cada código HTTP):
   `powershell -ExecutionPolicy Bypass -File scripts\demo.ps1` (opciones: `-BaseUrl`, `-Auto` para correr sin pausas,
   `-AbrirPdf` para abrir el comprobante y la factura al final). Necesita el backend en marcha y crea datos de prueba.
@@ -84,7 +86,7 @@ exus.ps1 -BaseUrl https://TU-URL`.
 2. Variable `baseUrl`: `http://localhost:8081` por defecto; cámbiala si usas otro puerto.
 3. Ejecuta primero la carpeta **00** (guarda tokens e IDs en variables) y luego cada carpeta en orden con *Collection Runner*.
 4. Cada request trae sus pruebas (`pm.test`): verde = la regla de la HU se cumple. Las fechas se calculan solas.
-5. La colección tiene 55 requests (HU-01 a HU-17) y se puede ejecutar varias veces seguidas: cada corrida crea sus propios datos
+5. La colección tiene 58 requests (HU-01 a HU-17) y se puede ejecutar varias veces seguidas: cada corrida crea sus propios datos
    (sede, usuario, habitación e ítem con nombres únicos) y deja libres las habitaciones de prueba. Los datos creados quedan en la base.
 
 El campo `simulacion` de `POST /api/reservas/{id}/pago` acepta `APROBADO`, `RECHAZADO` o `PENDIENTE`
@@ -118,7 +120,8 @@ tras **15 minutos sin actividad** (HU-06).
 | HU | Método y ruta | Descripción |
 |---|---|---|
 | 13 | `GET /api/admin/sedes`, `POST /api/admin/sedes`, `PUT /api/admin/sedes/{id}`, `POST /api/admin/sedes/{id}/estado` | Listar todas (activas e inactivas), crear, editar y activar/inactivar sedes |
-| 13 | `GET /api/admin/reservas?sedeId=` | Reservas de la sede elegida |
+| 13 | `GET /api/admin/sede-activa`, `PUT /api/admin/sede-activa` (body: `sedeId`) | Ver y cambiar la sede activa del administrador |
+| 13 | `GET /api/admin/reservas[?sedeId=]` | Reservas de la sede indicada o, sin `sedeId`, de la sede activa |
 | 14 | `GET /api/admin/usuarios[?sedeId=]`, `POST /api/admin/usuarios`, `PUT /api/admin/usuarios/{id}`, `PUT /api/admin/usuarios/{id}/sede`, `DELETE /api/admin/usuarios/{id}` | Listar (todos o por sede), crear recepcionista, editar nombre/correo, reasignar sede, desactivar |
 | 15 | `POST /api/admin/habitaciones`, `PUT /api/admin/habitaciones/{id}`, `POST /api/admin/habitaciones/{id}/estado` | Inventario y cambio de estado (p. ej. Mantenimiento) |
 | 16 | `GET /api/admin/catalogo?sedeId=`, `POST /api/admin/catalogo`, `PUT /api/admin/catalogo/{id}`, `POST /api/admin/catalogo/{id}/estado` | Catálogo (activos e inactivos); inactivar no borra el histórico |
@@ -128,11 +131,13 @@ tras **15 minutos sin actividad** (HU-06).
 ```
 presentacion.api / dto / excepcion      Controllers REST, DTOs, manejo de errores
 aplicacion.servicios                    ReservaService, PagoService, OperacionService, FacturacionService,
-                                        AuthService, AdministracionService
-aplicacion.puertos / reembolso / sesion Interfaces (IReservaRepository, IPagoGateway, IEmailSender, IPdfGenerator…) + Strategy
+                                        AuthService, ReporteService (HU-17), AdministracionService (HU-13 a HU-16)
+aplicacion.puertos / reembolso / sesion Interfaces (IReservaRepository, IPagoGateway, IEmailSender, IPdfGenerator,
+                                        IDocumentoRepository…) + Strategy
 dominio.modelo / excepcion              Sede, Usuario→Administrador/Recepcionista, Habitacion, Reserva, Consumo, Pago, Factura…
-infraestructura                         persistencia, pse (PseGatewayAdapter), correo (SmtpEmailSender), pdf (FacturaPdfGenerator),
-                                        jobs (JobLiberacionBloqueo), seguridad (JWT), config (DataInitializer…)
+infraestructura                         persistencia, pse (PseGatewayAdapter), correo (OutboxEmailSender, SmtpEmailSender),
+                                        pdf (FacturaPdfGenerator, AlmacenamientoPdf), jobs (JobLiberacionBloqueo, PublicadorOutbox),
+                                        seguridad (JWT), config (DataInitializer…)
 ```
 Dependencias: presentación → aplicación → dominio; la infraestructura implementa los puertos de la aplicación.
 
@@ -182,6 +187,13 @@ el administrador ve todas.
 - Reportes (HU-17): ocupación = noches vendidas / (habitaciones × noches del rango); ingresos = reservas confirmadas
   (`Pagada`, `EnCurso`, `PendienteDeCierre`, `Cerrada`) cuya fecha de salida cae en el rango, desglosados en estadía, recargo
   por salida tardía y consumos (sin los anulados). Sin datos en el período, los valores salen en cero con un mensaje.
-- La "sede activa" del administrador (HU-13) no se guarda en el servidor: el administrador indica la sede en cada consulta
-  (`sedeId`), y el recepcionista siempre queda limitado a la suya.
+- **Sede activa (HU-13, `Administrador.cambiarSedeActiva`):** se guarda en el servidor (`GET/PUT /api/admin/sede-activa`). Las consultas
+  del administrador (reservas, catálogo, reportes) que no traen `sedeId` se resuelven contra ella; si no hay sede activa, 422 con
+  "Debe seleccionar una sede para continuar". El recepcionista siempre queda limitado a la suya.
+- **Correo con outbox:** los servicios no envían correos en la petición: `OutboxEmailSender` los deja en la colección `outbox_correos` y
+  `PublicadorOutbox` (job cada 5 s) los publica por SMTP, con hasta 5 reintentos. Sin servidor SMTP configurado el correo solo se escribe
+  en el log (`[CORREO SIMULADO]`); para envío real define `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`,
+  `SPRING_MAIL_PASSWORD` (y `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true`, `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true`).
+- **PDF guardados:** el comprobante y la factura se generan una vez, se guardan en la colección `documentos_pdf` y las descargas
+  posteriores leen ese documento.
 - Zona horaria del servidor para todos los timestamps oficiales: `America/Bogota`.

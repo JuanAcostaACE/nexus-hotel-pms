@@ -7,6 +7,7 @@ import com.nexus.hotelpms.aplicacion.puertos.IReservaRepository;
 import com.nexus.hotelpms.aplicacion.puertos.ISedeRepository;
 import com.nexus.hotelpms.aplicacion.puertos.IUsuarioRepository;
 import com.nexus.hotelpms.aplicacion.servicios.AdministracionService;
+import com.nexus.hotelpms.aplicacion.servicios.ReporteService;
 import com.nexus.hotelpms.dominio.excepcion.ConflictoException;
 import com.nexus.hotelpms.dominio.excepcion.ReglaNegocioException;
 import com.nexus.hotelpms.dominio.modelo.Administrador;
@@ -44,6 +45,7 @@ class AdministracionServiceTest {
     private IReservaRepository reservas;
     private IConsumoRepository consumos;
     private AdministracionService servicio;
+    private ReporteService reportes;
 
     @BeforeEach
     void preparar() {
@@ -58,7 +60,8 @@ class AdministracionServiceTest {
         when(usuarios.save(any())).thenAnswer(i -> i.getArgument(0));
         when(habitaciones.guardar(any())).thenAnswer(i -> i.getArgument(0));
         servicio = new AdministracionService(sedes, usuarios, habitaciones, mock(ICatalogoItemRepository.class),
-                reservas, consumos, encoder);
+                reservas, encoder);
+        reportes = new ReporteService(sedes, habitaciones, reservas, consumos);
     }
 
     // ------------------------------------------------------------ HU-14: correos
@@ -156,7 +159,7 @@ class AdministracionServiceTest {
         when(reservas.buscarPorSede("sede-1")).thenReturn(List.of(r));
         when(habitaciones.buscarPorSede("sede-1")).thenReturn(List.of(h));
 
-        Map<String, Object> rep = servicio.ingresos("sede-1", java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(10));
+        Map<String, Object> rep = reportes.ingresos("sede-1", java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(10));
 
         assertThat((BigDecimal) rep.get("ingresosPenalidades")).isEqualByComparingTo("100000");
         assertThat((BigDecimal) rep.get("total")).isEqualByComparingTo("100000");
@@ -167,7 +170,7 @@ class AdministracionServiceTest {
     @Test
     void sinDatosElReporteSaleEnCeroConMensaje() {
         when(reservas.buscarPorSede("sede-1")).thenReturn(List.of());
-        Map<String, Object> rep = servicio.ingresos("sede-1", java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(5));
+        Map<String, Object> rep = reportes.ingresos("sede-1", java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(5));
         assertThat((BigDecimal) rep.get("total")).isEqualByComparingTo("0");
         assertThat(rep.get("mensaje")).isEqualTo("No hay datos para el período seleccionado");
     }
