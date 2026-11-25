@@ -32,16 +32,15 @@ Los diagramas están en formato de imagen. La versión textual de cada vista est
 <img width="888" height="659" alt="Diagrama vista de contexto" src="https://github.com/user-attachments/assets/7eca8614-7886-4c24-8ac6-2dc2dbe65af4" />
 
 ### Vista funcional
-<img width="1457" height="835" alt="Diagrama vista funcional" src="https://github.com/user-attachments/assets/534895b4-3041-451d-8406-ba8c6627e54b" />
+<img width="1457" height="835" alt="diagrama vista funcional (6)" src="https://github.com/user-attachments/assets/41c19ea1-ce8d-43d9-be63-9063b17e9a65" />
+
 
 ### Vista logica
-<img width="1123" height="1014" alt="diagrama vista logica" src="https://github.com/user-attachments/assets/be6d5223-d65f-4ce8-ab44-e7f3882897a9" />
+<img width="1124" height="1084" alt="diagrama vista logica (7)" src="https://github.com/user-attachments/assets/737c2550-963f-40a2-84e9-cb528aee2a19" />
+
 
 ### Vista de desarrollo (por capas)
 <img width="1209" height="961" alt="diagrama vista de desarrollo(por capas) (8)" src="https://github.com/user-attachments/assets/b4349d45-f65d-4450-a725-9d335a41eee5" />
-
-
-
 
 ### Vista de despliegue
 <img width="1565" height="667" alt="Diagrama vista de despliegue" src="https://github.com/user-attachments/assets/5f02dcbc-721e-4543-9b7d-b891d06a9c4c" />
