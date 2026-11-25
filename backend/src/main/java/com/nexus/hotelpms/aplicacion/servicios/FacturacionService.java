@@ -82,12 +82,14 @@ public class FacturacionService {
         return new LineaImpuesto(nombre, tasa, base, base.multiply(tasa).setScale(2, RoundingMode.HALF_UP));
     }
 
+    // Llamado desde: ReservaController.factura
     public Factura consultar(String idOCodigo, AuthPrincipal p) {
         Reserva r = reservaService.obtenerParaPersonal(idOCodigo, p);
         return facturas.findByReservaId(r.getId()).orElseThrow(() -> new RecursoNoEncontradoException(
                 "La reserva aún no tiene factura: no ha completado el check-out"));
     }
 
+    // Llamado desde: ReservaController.facturaPdf
     public byte[] pdf(String idOCodigo, AuthPrincipal p) {
         Reserva r = reservaService.obtenerParaPersonal(idOCodigo, p);
         Factura f = consultar(idOCodigo, p);
@@ -101,6 +103,7 @@ public class FacturacionService {
     }
 
     /** Reintento manual del cierre si la generación falló y la reserva quedó PendienteDeCierre. */
+    // Llamado desde: ReservaController.cerrar
     public Factura reintentarCierre(String idOCodigo, AuthPrincipal p) {
         return cerrarReserva(reservaService.obtenerParaPersonal(idOCodigo, p));
     }

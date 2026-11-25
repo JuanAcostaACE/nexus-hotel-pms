@@ -44,12 +44,14 @@ public class OperacionService {
     }
 
     // ------------------------------------------------------------ lecturas de apoyo
+    // Llamado desde: OperacionController.habitaciones
     public List<Habitacion> listarHabitaciones(AuthPrincipal p, String sedeIdParam, EstadoHabitacion estado) {
         String sede = sedeDeConsulta(p, sedeIdParam);
         return estado == null ? habitaciones.buscarPorSede(sede) : habitaciones.buscarPorSedeYEstado(sede, estado);
     }
 
     /** Solo ítems activos de la sede (HU-09: los inactivos no se ofrecen). */
+    // Llamado desde: OperacionController.catalogo
     public List<CatalogoItem> listarCatalogo(AuthPrincipal p, String sedeIdParam) {
         return catalogo.findBySedeIdAndActivoTrue(sedeDeConsulta(p, sedeIdParam));
     }
@@ -86,6 +88,7 @@ public class OperacionService {
     }
 
     // ------------------------------------------------------------ HU-09
+    // Llamado desde: OperacionController.registrarConsumo
     public Consumo registrarConsumo(String habitacionId, String itemId, int cantidad, AuthPrincipal p) {
         Habitacion h = habitacion(habitacionId, p);
         if (h.getEstado() != EstadoHabitacion.Ocupada) {
@@ -99,6 +102,7 @@ public class OperacionService {
         return consumos.save(new Consumo(r, item, cantidad, p.userId(), ZonedDateTime.now(clock).toInstant()));
     }
 
+    // Llamado desde: OperacionController.cuenta
     public CuentaHabitacion cuenta(String habitacionId, AuthPrincipal p) {
         Habitacion h = habitacion(habitacionId, p);
         Reserva r = reservaEnCurso(h);
@@ -106,6 +110,7 @@ public class OperacionService {
         return new CuentaHabitacion(h.getNumero(), r.getCodigo(), lista, sumaActivos(lista));
     }
 
+    // Llamado desde: OperacionController.anular
     public Consumo anularConsumo(String consumoId, String motivo, AuthPrincipal p) {
         Consumo c = consumos.findById(consumoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Consumo no encontrado"));
@@ -131,6 +136,7 @@ public class OperacionService {
      * @param confirmar false = solo muestra el resumen (sin cambiar estados); true = registra el check-out,
      *                  pasa la habitación a En Limpieza y dispara la facturación/cierre.
      */
+    // Llamado desde: OperacionController.checkout
     public ResumenCuenta checkout(String habitacionId, boolean confirmar, AuthPrincipal p) {
         Habitacion h = habitacion(habitacionId, p);
         if (h.getEstado() != EstadoHabitacion.Ocupada) {
@@ -167,6 +173,7 @@ public class OperacionService {
     }
 
     /** HU-11: habilitación manual tras la limpieza. */
+    // Llamado desde: OperacionController.habilitar
     public Habitacion habilitar(String habitacionId, AuthPrincipal p) {
         Habitacion h = habitacion(habitacionId, p);
         switch (h.getEstado()) {

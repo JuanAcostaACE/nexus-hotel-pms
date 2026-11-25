@@ -19,12 +19,14 @@ public class AuthController {
 
     public AuthController(AuthService auth) { this.auth = auth; }
 
+    // Front: 'Acceso personal' → 'Entrar' (app.js · login)
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest req) {
         return auth.login(req.email(), req.password());
     }
 
     /** Cambio de la propia contraseña (requiere sesión). */
+    // Front: barra superior → 'Contraseña' → 'Guardar' (app.js · cambiarPassword)
     @PostMapping("/cambiar-password")
     public Map<String, String> cambiarPassword(@AuthenticationPrincipal AuthPrincipal p,
                                                @Valid @RequestBody CambiarPasswordRequest req) {

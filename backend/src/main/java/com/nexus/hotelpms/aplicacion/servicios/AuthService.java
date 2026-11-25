@@ -29,6 +29,7 @@ public class AuthService {
         this.props = props;
     }
 
+    // Llamado desde: AuthController.login
     public LoginResponse login(String email, String password) {
         Usuario u = usuarios.findByEmail(email.trim().toLowerCase())
                 .orElseThrow(() -> new CredencialesInvalidasException("Credenciales incorrectas"));
@@ -45,6 +46,7 @@ public class AuthService {
     }
 
     /** Cambio de contraseña del propio usuario: exige la contraseña actual. */
+    // Llamado desde: AuthController.cambiarPassword
     public void cambiarPassword(String userId, String actual, String nueva) {
         Usuario u = usuarios.findById(userId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
@@ -60,6 +62,7 @@ public class AuthService {
     }
 
     /** Solo administradores (control en el controlador): levanta el bloqueo de una cuenta. */
+    // Llamado desde: AdminController.desbloquear
     public void desbloquear(String usuarioId) {
         Usuario u = usuarios.findById(usuarioId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));

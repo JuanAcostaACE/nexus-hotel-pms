@@ -63,21 +63,25 @@ public class AdminController {
                               @NotBlank(message = "La dirección de la sede es obligatoria") String direccion) { }
     public record ActivaRequest(boolean activa) { }
 
+    // Front: Administración, pestaña 'Sedes' (personal.js · sedes)
     @GetMapping("/sedes")
     public List<Sede> listarSedes() {
         return admin.listarTodasLasSedes();
     }
 
+    // Front: Administración, Sedes → 'Crear sede' (personal.js · sedes)
     @PostMapping("/sedes")
     public ResponseEntity<Sede> crearSede(@Valid @RequestBody SedeRequest r) {
         return creado(admin.crearSede(r.nombre(), r.direccion()));
     }
 
+    // Front: Administración, Sedes → 'Editar' → 'Guardar cambios' (personal.js · sedes)
     @PutMapping("/sedes/{id}")
     public Sede actualizarSede(@PathVariable String id, @Valid @RequestBody SedeRequest r) {
         return admin.actualizarSede(id, r.nombre(), r.direccion());
     }
 
+    // Front: Administración, Sedes → 'Inactivar' / 'Activar' (personal.js · sedes)
     @PostMapping("/sedes/{id}/estado")
     public Sede activarSede(@PathVariable String id, @RequestBody ActivaRequest r) {
         return admin.cambiarActivaSede(id, r.activa());
@@ -86,12 +90,14 @@ public class AdminController {
     public record SedeActivaRequest(@NotBlank(message = "Debe seleccionar una sede para continuar") String sedeId) { }
 
     /** HU-13: sede activa del administrador (null si aún no eligió una). */
+    // Front: Administración, selector 'Sede activa' al cargar el panel (personal.js · pintarSedeActiva)
     @GetMapping("/sede-activa")
     public Map<String, Object> sedeActiva(@AuthenticationPrincipal AuthPrincipal p) {
         return admin.sedeActiva(p.userId());
     }
 
     /** HU-13: el administrador cambia su sede activa; las consultas sin {@code sedeId} se resuelven contra ella. */
+    // Front: Administración, cambio en el selector 'Sede activa' (personal.js · pintarSedeActiva)
     @PutMapping("/sede-activa")
     public Map<String, Object> cambiarSedeActiva(@AuthenticationPrincipal AuthPrincipal p,
                                                  @Valid @RequestBody SedeActivaRequest r) {
@@ -99,6 +105,7 @@ public class AdminController {
     }
 
     /** HU-13: vista de reservas de la sede indicada o, si no se indica, de la sede activa. */
+    // Front: Administración, pestaña 'Reservas' (personal.js · reservas)
     @GetMapping("/reservas")
     public List<Reserva> reservasDeSede(@AuthenticationPrincipal AuthPrincipal p,
                                         @RequestParam(required = false) String sedeId) {
@@ -119,33 +126,39 @@ public class AdminController {
             @NotBlank(message = "Debe asignar una sede al usuario para continuar") String sedeId) { }
 
     /** Con {@code sedeId} solo devuelve los usuarios de esa sede (HU-13); sin él, todos. */
+    // Front: Administración, pestaña 'Usuarios' (personal.js · usuarios)
     @GetMapping("/usuarios")
     public List<Usuario> listarUsuarios(@RequestParam(required = false) String sedeId) {
         return admin.listarUsuarios(sedeId);
     }
 
     /** HU-06: el administrador desbloquea una cuenta bloqueada por intentos fallidos. */
+    // Front: Administración, Usuarios → 'Desbloquear' (personal.js · usuarios)
     @PostMapping("/usuarios/{id}/desbloquear")
     public ResponseEntity<Map<String, String>> desbloquear(@PathVariable String id) {
         auth.desbloquear(id);
         return ResponseEntity.ok(Map.of("mensaje", "Cuenta desbloqueada"));
     }
 
+    // Front: Administración, Usuarios → 'Crear recepcionista' (personal.js · usuarios)
     @PostMapping("/usuarios")
     public ResponseEntity<Usuario> crearRecepcionista(@Valid @RequestBody RecepcionistaRequest r) {
         return creado(admin.crearRecepcionista(r.nombre(), r.email(), r.password(), r.sedeId()));
     }
 
+    // Front: Administración, Usuarios → 'Editar' → 'Guardar cambios' (personal.js · usuarios)
     @PutMapping("/usuarios/{id}")
     public Usuario actualizarUsuario(@PathVariable String id, @Valid @RequestBody UsuarioUpdateRequest r) {
         return admin.actualizarUsuario(id, r.nombre(), r.email());
     }
 
+    // Front: Administración, Usuarios → 'Editar' (cambio de sede)
     @PutMapping("/usuarios/{id}/sede")
     public Usuario reasignarSede(@PathVariable String id, @Valid @RequestBody SedeAsignadaRequest r) {
         return admin.reasignarSede(id, r.sedeId());
     }
 
+    // Front: Administración, Usuarios → 'Desactivar' (personal.js · usuarios)
     @DeleteMapping("/usuarios/{id}")
     public Usuario inactivarUsuario(@PathVariable String id) {
         return admin.inactivarUsuario(id);
@@ -166,16 +179,19 @@ public class AdminController {
     public record EstadoHabitacionRequest(@NotNull(message = "El estado es obligatorio") EstadoHabitacion estado,
                                           Boolean confirmar) { }
 
+    // Front: Administración, Habitaciones → 'Crear habitación' (personal.js · habitaciones)
     @PostMapping("/habitaciones")
     public ResponseEntity<Habitacion> crearHabitacion(@Valid @RequestBody HabitacionRequest r) {
         return creado(admin.crearHabitacion(r.sedeId(), r.numero(), r.tipo(), r.capacidadMax(), r.precioBase()));
     }
 
+    // Front: Administración, Habitaciones → 'Editar' → 'Guardar cambios' (personal.js · habitaciones)
     @PutMapping("/habitaciones/{id}")
     public Habitacion actualizarHabitacion(@PathVariable String id, @Valid @RequestBody HabitacionUpdateRequest r) {
         return admin.actualizarHabitacion(id, r.tipo(), r.capacidadMax(), r.precioBase());
     }
 
+    // Front: Administración, Habitaciones → columna 'Cambiar a' (personal.js · habitaciones)
     @PostMapping("/habitaciones/{id}/estado")
     public Map<String, Object> cambiarEstado(@PathVariable String id, @Valid @RequestBody EstadoHabitacionRequest r) {
         return admin.cambiarEstadoHabitacion(id, r.estado(), Boolean.TRUE.equals(r.confirmar()));
@@ -192,28 +208,33 @@ public class AdminController {
             @NotNull(message = "El precio es obligatorio") @Positive(message = "El precio debe ser mayor a cero") BigDecimal precio,
             @NotNull(message = "La categoría es obligatoria") CategoriaConsumo categoria) { }
 
+    // Front: Administración, pestaña 'Catálogo' (personal.js · catalogo)
     @GetMapping("/catalogo")
     public List<CatalogoItem> listarCatalogo(@AuthenticationPrincipal AuthPrincipal p,
                                              @RequestParam(required = false) String sedeId) {
         return admin.listarCatalogoCompleto(sedeOActiva(sedeId, p));
     }
 
+    // Front: Administración, Catálogo → 'Crear ítem' (personal.js · catalogo)
     @PostMapping("/catalogo")
     public ResponseEntity<CatalogoItem> crearItem(@Valid @RequestBody ItemRequest r) {
         return creado(admin.crearItem(r.sedeId(), r.nombre(), r.precio(), r.categoria()));
     }
 
+    // Front: Administración, Catálogo → 'Editar' → 'Guardar cambios' (personal.js · catalogo)
     @PutMapping("/catalogo/{id}")
     public CatalogoItem actualizarItem(@PathVariable String id, @Valid @RequestBody ItemUpdateRequest r) {
         return admin.actualizarItem(id, r.nombre(), r.precio(), r.categoria());
     }
 
+    // Front: Administración, Catálogo → 'Inactivar' / 'Activar' (personal.js · catalogo)
     @PostMapping("/catalogo/{id}/estado")
     public CatalogoItem cambiarActivo(@PathVariable String id, @RequestBody ActivaRequest r) {
         return admin.cambiarActivoItem(id, r.activa());
     }
 
     // ---- HU-17: reportes operativos ----
+    // Front: Administración, Reportes → 'Generar' (personal.js · reportes)
     @GetMapping("/reportes/ocupacion")
     public Map<String, Object> ocupacion(
             @AuthenticationPrincipal AuthPrincipal p,
@@ -223,6 +244,7 @@ public class AdminController {
         return reportes.ocupacion(sedeOActiva(sedeId, p), fechaInicio, fechaFin);
     }
 
+    // Front: Administración, Reportes → 'Generar' (personal.js · reportes)
     @GetMapping("/reportes/ingresos")
     public Map<String, Object> ingresos(
             @AuthenticationPrincipal AuthPrincipal p,

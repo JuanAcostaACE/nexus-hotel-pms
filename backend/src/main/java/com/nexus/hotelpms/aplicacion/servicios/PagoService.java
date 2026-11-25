@@ -34,6 +34,7 @@ public class PagoService {
         this.clock = clock;
     }
 
+    // Llamado desde: PagoController.pagar
     public PagoResponse iniciarPago(String idOCodigo, PagoRequest req) {
         Reserva r = reservaService.obtenerParaCliente(idOCodigo, req.documento());
         if (r.getEstado() != EstadoReserva.Bloqueada) {
@@ -51,6 +52,7 @@ public class PagoService {
     }
 
     /** Webhook de PSE: confirma o rechaza un pago que había quedado Pendiente. */
+    // Llamado desde: PagoController.webhook
     public PagoResponse procesarWebhook(String transaccionId, String resultado) {
         EstadoPago res;
         try {

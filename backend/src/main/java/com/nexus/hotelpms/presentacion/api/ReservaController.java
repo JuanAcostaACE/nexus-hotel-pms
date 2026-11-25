@@ -28,12 +28,14 @@ public class ReservaController {
         this.facturacion = facturacion;
     }
 
+    // Front: Cliente, selector 'Hotel sede' al abrir la web (cliente.js · home)
     @GetMapping("/sedes")
     public java.util.List<com.nexus.hotelpms.dominio.modelo.Sede> sedes() {
         return reservas.listarSedesActivas();
     }
 
     /** HU-01 (público). Sin sede devuelve el mensaje de error de la historia. */
+    // Front: Cliente, botón 'Buscar' (cliente.js · buscar)
     @GetMapping({"/sedes/{sedeId}/disponibilidad", "/disponibilidad"})
     public DisponibilidadResponse disponibilidad(
             @PathVariable(value = "sedeId", required = false) String sedeEnRuta,
@@ -46,12 +48,14 @@ public class ReservaController {
     }
 
     /** HU-02 (público): crea la reserva y bloquea la habitación 15 minutos. */
+    // Front: Cliente, 'Reservar →' y luego 'Confirmar reserva' (cliente.js · abrirReserva)
     @PostMapping("/reservas")
     public ResponseEntity<Reserva> crear(@Valid @RequestBody CrearReservaRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservas.crear(req));
     }
 
     /** HU-07 (personal). */
+    // Front: Recepción, pestaña 'Buscar reserva' y botón 'Buscar' (personal.js · buscar)
     @GetMapping("/reservas/buscar")
     public BusquedaResponse buscar(@AuthenticationPrincipal AuthPrincipal p,
                                    @RequestParam(required = false) String cedula,
@@ -61,18 +65,21 @@ public class ReservaController {
     }
 
     /** Lectura por ID o código (también es el destino del QR escaneado en mostrador, HU-05/HU-08). */
+    // Front: sin botón directo; consulta una reserva por código o id
     @GetMapping("/reservas/{id}")
     public Reserva obtener(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return reservas.obtenerParaPersonal(id, p);
     }
 
     /** HU-04 (público). */
+    // Front: Cliente, 'Mis reservas' → Cancelar → 'Cancelar reserva' (cliente.js · cancelar)
     @PostMapping("/reservas/{id}/cancelar")
     public CancelacionResponse cancelar(@PathVariable String id, @Valid @RequestBody CancelarRequest req) {
         return reservas.cancelar(id, req.documento());
     }
 
     /** HU-05 (público): PDF con QR. */
+    // Front: Cliente, 'Descargar comprobante' (cliente.js · pagoModal y comprobante)
     @GetMapping("/reservas/{id}/comprobante")
     public ResponseEntity<byte[]> comprobante(@PathVariable String id,
                                               @RequestParam(required = false) String documento) {
@@ -80,27 +87,32 @@ public class ReservaController {
     }
 
     /** HU-08. */
+    // Front: Recepción, 'Registrar check-in' o botón 'Check-in' en la búsqueda (personal.js · checkin y buscar)
     @PostMapping("/reservas/{id}/checkin")
     public Reserva checkIn(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return reservas.checkIn(id, p);
     }
 
+    // Front: Recepción, 'Check-in / No-show' → 'Marcar No-Show' (personal.js · checkin)
     @PostMapping("/reservas/{id}/no-show")
     public Reserva noShow(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return reservas.registrarNoShow(id, p);
     }
 
     /** HU-12. */
+    // Front: Recepción, pestaña 'Factura' → 'Ver factura' (personal.js · factura)
     @GetMapping("/reservas/{id}/factura")
     public Factura factura(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return facturacion.consultar(id, p);
     }
 
+    // Front: Recepción, pestaña 'Factura' → 'Descargar PDF' (personal.js · factura)
     @GetMapping("/reservas/{id}/factura/pdf")
     public ResponseEntity<byte[]> facturaPdf(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return pdf(facturacion.pdf(id, p), "factura-" + id + ".pdf");
     }
 
+    // Front: sin botón; reintento manual del cierre de la factura
     @PostMapping("/reservas/{id}/cerrar")
     public Factura cerrar(@AuthenticationPrincipal AuthPrincipal p, @PathVariable String id) {
         return facturacion.reintentarCierre(id, p);

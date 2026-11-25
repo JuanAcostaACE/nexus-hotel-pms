@@ -22,12 +22,14 @@ public class PagoController {
     }
 
     /** Inicia el pago por PSE. {@code simulacion}: Aprobado | Rechazado | Pendiente (solo simulador). */
+    // Front: Cliente, 'Pagar ahora' → 'Pagar' (cliente.js · pagoModal) y 'Mis reservas' → 'Pagar con PSE' (cliente.js · pagar)
     @PostMapping("/reservas/{id}/pago")
     public PagoResponse pagar(@PathVariable String id, @Valid @RequestBody PagoRequest req) {
         return pagos.iniciarPago(id, req);
     }
 
     /** Webhook asíncrono de PSE; se autentica con la cabecera X-PSE-Secret compartida. */
+    // Front: sin botón; lo llama la pasarela PSE (simulada)
     @PostMapping("/webhooks/pse")
     public PagoResponse webhook(@RequestHeader(value = "X-PSE-Secret", required = false) String secreto,
                                 @Valid @RequestBody WebhookPseRequest req) {

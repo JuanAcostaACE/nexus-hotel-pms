@@ -63,11 +63,13 @@ public class ReservaService {
     private ZonedDateTime ahora() { return ZonedDateTime.now(clock); }
 
     /** Sedes activas para que el cliente elija en HU-01. */
+    // Llamado desde: ReservaController.sedes
     public List<Sede> listarSedesActivas() {
         return sedes.findAll().stream().filter(Sede::isActiva).toList();
     }
 
     // ------------------------------------------------------------------ HU-01
+    // Llamado desde: ReservaController.disponibilidad
     public DisponibilidadResponse consultarDisponibilidad(String sedeId, LocalDate entrada, LocalDate salida,
                                                           Integer huespedes) {
         if (sedeId == null || sedeId.isBlank()) {
@@ -99,6 +101,7 @@ public class ReservaService {
     }
 
     // ------------------------------------------------------------------ HU-02
+    // Llamado desde: ReservaController.crear
     public Reserva crear(CrearReservaRequest req) {
         validarFechas(req.fechaEntrada(), req.fechaSalida());
         Sede sede = sedes.findById(req.sedeId()).orElseThrow(() -> new RecursoNoEncontradoException("La sede no existe"));
@@ -159,6 +162,7 @@ public class ReservaService {
 
     // ------------------------------------------------------------------ consultas
     /** Acceso público por ID interno o código (flujo del cliente). */
+    // Llamado desde: ReservaController.obtener
     public Reserva obtener(String idOCodigo) {
         return reservas.buscarPorCodigo(idOCodigo).or(() -> reservas.buscarPorId(idOCodigo))
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva no encontrada"));
@@ -189,6 +193,7 @@ public class ReservaService {
     }
 
     // ------------------------------------------------------------------ HU-07
+    // Llamado desde: ReservaController.buscar
     public BusquedaResponse buscar(AuthPrincipal p, String cedula, String id, String sedeId) {
         boolean sinCedula = cedula == null || cedula.isBlank();
         boolean sinId = id == null || id.isBlank();
@@ -212,6 +217,7 @@ public class ReservaService {
     }
 
     // Patrón Strategy (contexto)
+    // Llamado desde: ReservaController.cancelar
     public CancelacionResponse cancelar(String idOCodigo, String documento) {
         Reserva r = obtenerParaCliente(idOCodigo, documento);
         PoliticaReembolso politica = selectorReembolso.seleccionar(r, ahora());
@@ -232,6 +238,7 @@ public class ReservaService {
 
     // ------------------------------------------------------------------ HU-05
     /** Descarga del cliente: exige código y documento. */
+    // Llamado desde: ReservaController.comprobante (cliente)
     public byte[] comprobanteCliente(String idOCodigo, String documento) {
         return comprobante(obtenerParaCliente(idOCodigo, documento).getCodigo());
     }
@@ -262,6 +269,7 @@ public class ReservaService {
     }
 
     // ------------------------------------------------------------------ HU-08
+    // Llamado desde: ReservaController.checkIn
     public Reserva checkIn(String idOCodigo, AuthPrincipal p) {
         Reserva r = obtenerParaPersonal(idOCodigo, p);
         r.checkIn(ahora());
@@ -272,6 +280,7 @@ public class ReservaService {
         return reservas.guardar(r);
     }
 
+    // Llamado desde: ReservaController.noShow
     public Reserva registrarNoShow(String idOCodigo, AuthPrincipal p) {
         Reserva r = obtenerParaPersonal(idOCodigo, p);
         r.marcarNoShow(ahora());

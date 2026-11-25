@@ -46,6 +46,7 @@ public class ReporteService {
     }
 
     /** Ocupación = noches vendidas dentro del rango / (habitaciones de la sede × noches del rango). */
+    // Llamado desde: AdminController.ocupacion
     public Map<String, Object> ocupacion(String sedeId, LocalDate inicio, LocalDate fin) {
         validarParametrosReporte(sedeId, inicio, fin);
         long totalHabitaciones = habitaciones.buscarPorSede(sedeId).size();
@@ -73,6 +74,7 @@ public class ReporteService {
      * retenido en cancelaciones con penalidad (generaron ingreso parcial, HU-17). Se detallan estadía, recargo por
      * salida tardía, consumos (sin los anulados) y penalidades, y el total general.
      */
+    // Llamado desde: AdminController.ingresos
     public Map<String, Object> ingresos(String sedeId, LocalDate inicio, LocalDate fin) {
         validarParametrosReporte(sedeId, inicio, fin);
         List<Reserva> enRango = reservasConfirmadas(sedeId).stream()

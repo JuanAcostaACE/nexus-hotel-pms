@@ -47,20 +47,24 @@ public class AdministracionService {
     // ---------- HU-13: sedes ----------
 
     /** HU-13: listado completo para el administrador (incluye sedes inactivas). */
+    // Llamado desde: AdminController.listarSedes
     public List<Sede> listarTodasLasSedes() {
         return sedes.findAll();
     }
 
+    // Llamado desde: AdminController.crearSede
     public Sede crearSede(String nombre, String direccion) {
         return sedes.save(new Sede(nombre, direccion));
     }
 
+    // Llamado desde: AdminController.actualizarSede
     public Sede actualizarSede(String id, String nombre, String direccion) {
         Sede s = sedes.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Sede no encontrada"));
         s.actualizar(nombre, direccion);
         return sedes.save(s);
     }
 
+    // Llamado desde: AdminController.activarSede
     public Sede cambiarActivaSede(String id, boolean activa) {
         Sede s = sedes.findById(id).orElseThrow(() -> new RecursoNoEncontradoException("Sede no encontrada"));
         if (activa) s.activar(); else s.inactivar();
@@ -68,6 +72,7 @@ public class AdministracionService {
     }
 
     /** HU-13: sede activa del administrador. Sin sede elegida devuelve {@code sedeId: null}. */
+    // Llamado desde: AdminController.sedeActiva
     public Map<String, Object> sedeActiva(String adminId) {
         Administrador a = buscarAdministrador(adminId);
         Map<String, Object> r = new LinkedHashMap<>();
@@ -86,6 +91,7 @@ public class AdministracionService {
     }
 
     /** HU-13: el administrador elige (y se recuerda) la sede sobre la que va a operar. */
+    // Llamado desde: AdminController.cambiarSedeActiva
     public Map<String, Object> cambiarSedeActiva(String adminId, String sedeId) {
         validarSede(sedeId);
         Administrador a = buscarAdministrador(adminId);
@@ -102,6 +108,7 @@ public class AdministracionService {
     // ---------- HU-14: usuarios y roles ----------
 
     /** HU-13/14: con {@code sedeId} lista solo los recepcionistas de esa sede; sin él, todos los usuarios. */
+    // Llamado desde: AdminController.listarUsuarios
     public List<Usuario> listarUsuarios(String sedeId) {
         List<Usuario> todos = usuarios.findAll();
         if (sedeId == null || sedeId.isBlank()) {
@@ -114,6 +121,7 @@ public class AdministracionService {
     }
 
     /** HU-14: edita nombre y correo; el rol y la sede no cambian. */
+    // Llamado desde: AdminController.actualizarUsuario
     public Usuario actualizarUsuario(String usuarioId, String nombre, String email) {
         Usuario u = buscarUsuario(usuarioId);
         String correo = normalizarCorreo(email);
@@ -125,6 +133,7 @@ public class AdministracionService {
     }
 
     /** HU-13: vista de reservas de la sede elegida (nunca mezcla sedes). */
+    // Llamado desde: AdminController.reservasDeSede
     public List<Reserva> listarReservas(String sedeId) {
         if (sedeId == null || sedeId.isBlank()) {
             throw new ReglaNegocioException("Debe seleccionar una sede para continuar");
@@ -133,6 +142,7 @@ public class AdministracionService {
         return reservas.buscarPorSede(sedeId);
     }
 
+    // Llamado desde: AdminController.crearRecepcionista
     public Usuario crearRecepcionista(String nombre, String email, String password, String sedeId) {
         validarSede(sedeId);
         String correo = normalizarCorreo(email);
@@ -142,6 +152,7 @@ public class AdministracionService {
         return usuarios.save(new Recepcionista(nombre.trim(), correo, encoder.encode(password), sedeId));
     }
 
+    // Llamado desde: AdminController.reasignarSede
     public Usuario reasignarSede(String usuarioId, String nuevaSedeId) {
         Usuario u = buscarUsuario(usuarioId);
         if (!(u instanceof Recepcionista r)) {
@@ -153,6 +164,7 @@ public class AdministracionService {
     }
 
     /** Baja lógica: el usuario se inactiva y no puede iniciar sesión (conserva auditoría). */
+    // Llamado desde: AdminController.inactivarUsuario
     public Usuario inactivarUsuario(String usuarioId) {
         Usuario u = buscarUsuario(usuarioId);
         u.inactivar();
@@ -161,6 +173,7 @@ public class AdministracionService {
 
     // ---------- HU-15: inventario de habitaciones ----------
 
+    // Llamado desde: AdminController.crearHabitacion
     public Habitacion crearHabitacion(String sedeId, String numero, String tipo, int capacidad, BigDecimal precio) {
         validarSede(sedeId);
         String num = numero.trim();
@@ -175,6 +188,7 @@ public class AdministracionService {
         }
     }
 
+    // Llamado desde: AdminController.actualizarHabitacion
     public Habitacion actualizarHabitacion(String id, String tipo, int capacidad, BigDecimal precio) {
         Habitacion h = habitaciones.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Habitación no encontrada"));
@@ -188,6 +202,7 @@ public class AdministracionService {
      * Mantenimiento exige confirmación explícita ({@code confirmar=true}); y al volver a Disponible una habitación con
      * reserva pagada queda Reservada, para que nadie más pueda reservarla.
      */
+    // Llamado desde: AdminController.cambiarEstado
     public Map<String, Object> cambiarEstadoHabitacion(String id, EstadoHabitacion nuevo, boolean confirmar) {
         Habitacion h = habitaciones.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Habitación no encontrada"));
@@ -219,6 +234,7 @@ public class AdministracionService {
     // ---------- HU-16: catálogo de consumos ----------
 
     /** HU-16: catálogo completo de una sede (activos e inactivos) para poder reactivar ítems. */
+    // Llamado desde: AdminController.listarCatalogo
     public List<CatalogoItem> listarCatalogoCompleto(String sedeId) {
         if (sedeId == null || sedeId.isBlank()) {
             throw new ReglaNegocioException("Debe seleccionar una sede para continuar");
@@ -227,11 +243,13 @@ public class AdministracionService {
         return catalogo.findBySedeId(sedeId);
     }
 
+    // Llamado desde: AdminController.crearItem
     public CatalogoItem crearItem(String sedeId, String nombre, BigDecimal precio, CategoriaConsumo categoria) {
         validarSede(sedeId);
         return catalogo.save(new CatalogoItem(sedeId, nombre, precio, categoria));
     }
 
+    // Llamado desde: AdminController.actualizarItem
     public CatalogoItem actualizarItem(String id, String nombre, BigDecimal precio, CategoriaConsumo categoria) {
         CatalogoItem it = catalogo.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Ítem no encontrado"));
@@ -239,6 +257,7 @@ public class AdministracionService {
         return catalogo.save(it);
     }
 
+    // Llamado desde: AdminController.cambiarActivo
     public CatalogoItem cambiarActivoItem(String id, boolean activo) {
         CatalogoItem it = catalogo.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Ítem no encontrado"));
